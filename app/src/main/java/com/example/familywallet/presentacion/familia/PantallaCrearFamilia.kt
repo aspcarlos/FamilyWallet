@@ -26,36 +26,27 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun PantallaCrearFamilia(
-    onHecho: (String) -> Unit,      // recibe el id creado
+    vm: FamiliaViewModel,
+    onHecho: (String) -> Unit,
+    onAtras: () -> Unit
 ) {
     var nombreFamilia by remember { mutableStateOf("") }
-    var alias by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
-
-    val vm: FamiliaViewModel = viewModel(
-        factory = FamiliaVMFactory(
-            familiaRepo = ServiceLocator.familiaRepo,
-            authRepo = ServiceLocator.authRepo
-        )
-    )
+    var alias         by remember { mutableStateOf("") }
+    var error         by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Text("Crear familia", style = MaterialTheme.typography.headlineSmall)
-
-        Spacer(Modifier.height(16.dp))
-
         OutlinedTextField(
             value = nombreFamilia,
             onValueChange = { nombreFamilia = it },
-            label = { Text("Nombre de la familia") },
-            modifier = Modifier.fillMaxWidth(0.9f)
+            label = { Text("Nombre familia") },
+            modifier = Modifier.fillMaxWidth(0.85f)
         )
 
         Spacer(Modifier.height(8.dp))
@@ -64,39 +55,31 @@ fun PantallaCrearFamilia(
             value = alias,
             onValueChange = { alias = it },
             label = { Text("Tu alias") },
-            modifier = Modifier.fillMaxWidth(0.9f)
+            modifier = Modifier.fillMaxWidth(0.85f)
         )
 
-        error?.let {
-            Spacer(Modifier.height(8.dp))
-            Text(it, color = MaterialTheme.colorScheme.error)
-        }
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
         Spacer(Modifier.height(16.dp))
 
         Button(
+            enabled = nombreFamilia.isNotBlank() && alias.isNotBlank(),
             onClick = {
                 scope.launch {
                     try {
-                        val id = vm.crearFamilia(
-                            nombre = nombreFamilia,
-                            aliasOwner = alias
-                        )
-                        onHecho(id)   // OK
+                        val id = vm.crearFamilia(nombreFamilia, alias)   // ← AQUÍ
+                        onHecho(id)
                     } catch (e: Exception) {
                         error = e.message ?: "Error al crear familia"
                     }
                 }
-            },
-            enabled = nombreFamilia.isNotBlank() && alias.isNotBlank(),
-            modifier = Modifier
-                .fillMaxWidth(0.5f)
-                .height(50.dp)
-        ) {
-            Text("Crear")
-        }
+            }
+        ) { Text("Crear") }
+
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
 }
+
 
 
 

@@ -6,9 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.familywallet.datos.repositorios.ServiceLocator
-import com.example.familywallet.presentacion.movimientos.MovimientosVMFactory
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
 import java.text.NumberFormat
 import java.util.Locale
@@ -19,71 +16,89 @@ fun PantallaInicio(
     vm: MovimientosViewModel,
     onIrAddGasto: () -> Unit,
     onIrAddIngreso: () -> Unit,
-    onIrHistorial: () -> Unit
+    onIrHistorial: () -> Unit,
+    onBackToConfig: () -> Unit
 ) {
-    // ✅ Crear el ViewModel con la factory conectada a Firebase
-    val vm: MovimientosViewModel = viewModel(
-        factory = MovimientosVMFactory(ServiceLocator.movimientosRepo)
-    )
 
-    val items by vm.itemsDelMesState
-
-    // ✅ Cargar datos al abrir o cambiar familia
     LaunchedEffect(familiaId) {
         vm.cargarMesActual(familiaId)
     }
 
-    // Formato de moneda
     val moneda = remember { NumberFormat.getCurrencyInstance(Locale("es", "ES")) }
 
-    // Contenido principal
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
+    Scaffold(
+        // Botón "Atrás" fijo abajo a la izquierda
+        bottomBar = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                OutlinedButton(onClick = onBackToConfig) {
+                    Text("Atrás")
+                }
+            }
+        }
+    ) { inner ->
         Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.Center
         ) {
-
+            // Mes actual
             Text(
-                vm.nombreMesActual(),
+                text = vm.nombreMesActual(), // asegúrate de tener este helper en tu VM
                 style = MaterialTheme.typography.headlineSmall
             )
 
+            Spacer(Modifier.height(12.dp))
+
+            // Totales
             Text("Ingresos: ${moneda.format(vm.totalIngresos)}")
             Text("Gastos:   ${moneda.format(vm.totalGastos)}")
 
             val resumen = vm.totalIngresos - vm.totalGastos
+            Spacer(Modifier.height(8.dp))
             Text(
-                "Resumen: ${moneda.format(resumen)}",
+                text = "Resumen: ${moneda.format(resumen)}",
                 style = MaterialTheme.typography.headlineMedium,
-                color = if (resumen < 0)
-                    MaterialTheme.colorScheme.error
-                else
-                    MaterialTheme.colorScheme.primary
+                color = if (resumen < 0) MaterialTheme.colorScheme.error
+                else MaterialTheme.colorScheme.primary
             )
 
-            Spacer(Modifier.height(8.dp))
+            // Botón Ver historial centrado
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = onIrHistorial,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            ) { Text("Ver historial") }
 
-            OutlinedButton(onClick = onIrHistorial) {
-                Text("Ver historial")
+            // Botones de añadir centrados y debajo del historial
+            Spacer(Modifier.height(24.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth(0.9f),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = onIrAddGasto,
+                    modifier = Modifier.weight(1f)
+                ) { Text("Añadir gasto") }
+
+                Button(
+                    onClick = onIrAddIngreso,
+                    modifier = Modifier.weight(1f)
+                ) { Text("Añadir ingreso") }
             }
         }
     }
-
-    // Botones inferiores
-    Row(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(20.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom
-    ) {
-        ElevatedButton(onClick = onIrAddGasto) { Text("Añadir gasto") }
-        ElevatedButton(onClick = onIrAddIngreso) { Text("Añadir ingreso") }
-    }
 }
+
 
 
 

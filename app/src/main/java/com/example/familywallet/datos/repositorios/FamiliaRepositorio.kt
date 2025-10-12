@@ -1,11 +1,11 @@
 package com.example.familywallet.datos.repositorios
 
-import com.example.familywallet.datos.modelos.Familia
-
 interface FamiliaRepositorio {
-    suspend fun crearFamilia(
-        nombre: String,
-        ownerUid: String,
-        aliasOwner: String
-    ): String // devuelve familiaId
+    suspend fun crearFamilia(nombre: String, ownerUid: String, aliasOwner: String): String
+    suspend fun miFamiliaId(ownerUid: String): String?
+    suspend fun eliminarFamilia(familiaId: String)
 }
+
+
+
+

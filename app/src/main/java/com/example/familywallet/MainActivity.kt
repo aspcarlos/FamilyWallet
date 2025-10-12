@@ -16,6 +16,8 @@ import com.example.familywallet.datos.repositorios.ServiceLocator
 import com.example.familywallet.presentacion.autenticacion.PantallaLogin
 import com.example.familywallet.presentacion.autenticacion.PantallaOlvidoPassword
 import com.example.familywallet.presentacion.autenticacion.PantallaRegistro
+import com.example.familywallet.presentacion.familia.FamiliaVMFactory
+import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import com.example.familywallet.presentacion.familia.PantallaConfigFamilia
 import com.example.familywallet.presentacion.familia.PantallaUnirseFamilia
 import com.example.familywallet.presentacion.inicio.PantallaInicio
@@ -43,8 +45,6 @@ sealed class Ruta(val route: String) {
     data object AddIngreso : Ruta("add_ingreso/{familiaId}")
 
     data object Historial : Ruta("historial/{familiaId}")
-    // OJO: en tu NavGraph usas "anio" y "mes" o "year" y "month".
-    // Aquí uso anio/mes como en tus capturas.
     data object HistorialMes : Ruta("historial_mes/{familiaId}/{anio}/{mes}")
 }
 
@@ -63,10 +63,16 @@ class MainActivity : ComponentActivity() {
 fun AppNav() {
     val nav = rememberNavController()
 
-    // Instancia ÚNICA del VM para movimientos
+    // VM de movimientos (ya lo tenías parecido)
     val movimientosVM: MovimientosViewModel = viewModel(
         factory = MovimientosVMFactory(ServiceLocator.movimientosRepo)
     )
+
+    // ✅ VM de familia (faltaba)
+    val familiaVM: FamiliaViewModel = viewModel(factory = FamiliaVMFactory(
+        familiaRepo = ServiceLocator.familiaRepo,
+        authRepo = ServiceLocator.authRepo
+    ))
 
     NavHost(
         navController = nav,
@@ -102,17 +108,27 @@ fun AppNav() {
         // -------------------------
         // 👨‍👩‍👧‍👦 Configuración de familia
         // -------------------------
-        composable(Ruta.ConfigFamilia.route) {
+        composable(route = Ruta.ConfigFamilia.route) {
             PantallaConfigFamilia(
-                onCrear = { nav.navigate(Ruta.CrearFamilia.route) },
-                onUnirse = { nav.navigate(Ruta.UnirseFamilia.route) }
-            )
-        }
-
-        composable(route = Ruta.CrearFamilia.route) {
-            PantallaCrearFamilia(
-                onHecho = { familiaId ->
+                vm = familiaVM,
+                onIrALaFamilia = { familiaId ->
                     nav.navigate("inicio/$familiaId") {
+                        popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onIrLogin = {
+                    // regresa al login “limpiando” la config de familia del back stack
+                    nav.navigate(Ruta.Login.route) {
+                        popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onCrear = { nav.navigate(Ruta.CrearFamilia.route) },
+                onUnirse = { nav.navigate(Ruta.UnirseFamilia.route) },
+                onAtras = {
+                    // “Atrás” desde Config → Login
+                    nav.navigate(Ruta.Login.route) {
                         popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
                         launchSingleTop = true
                     }
@@ -120,6 +136,18 @@ fun AppNav() {
             )
         }
 
+        composable(route = Ruta.CrearFamilia.route) {
+            PantallaCrearFamilia(
+                vm = familiaVM,
+                onHecho = { familiaId ->
+                    nav.navigate("inicio/$familiaId") {
+                        popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onAtras = { nav.popBackStack() }
+            )
+        }
 
         composable(Ruta.UnirseFamilia.route) {
             PantallaUnirseFamilia(
@@ -135,7 +163,7 @@ fun AppNav() {
         // 🏠 Inicio (usa VM)
         // -------------------------
         composable(
-            route = Ruta.Inicio.route,
+            route = "inicio/{familiaId}",
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
@@ -143,9 +171,18 @@ fun AppNav() {
             PantallaInicio(
                 familiaId = familiaId,
                 vm = movimientosVM,
-                onIrAddGasto   = { nav.navigate("add_gasto/$familiaId") },
+                onIrAddGasto = { nav.navigate("add_gasto/$familiaId") },
                 onIrAddIngreso = { nav.navigate("add_ingreso/$familiaId") },
-                onIrHistorial  = { nav.navigate("historial/$familiaId") }
+                onIrHistorial = { nav.navigate("historial/$familiaId") },
+
+                // ✅ Botón "Atrás" que vuelve a ConfigFamilia
+                onBackToConfig = {
+                    nav.navigate(Ruta.ConfigFamilia.route) {
+                        // sacamos esta pantalla del back stack
+                        popUpTo("inicio/$familiaId") { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
 
