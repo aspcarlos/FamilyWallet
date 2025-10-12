@@ -69,6 +69,8 @@ dependencies {
     // Play services coroutines (para await() con Tasks)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.androidx.foundation)
+    implementation(libs.androidx.runtime.saveable)
+    implementation(libs.androidx.foundation.layout)
 
     // Tests
     testImplementation(libs.junit)

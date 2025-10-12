@@ -1,61 +1,106 @@
-package com.example.familywallet.presentacion.familia
-
-import android.util.Log
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.familywallet.datos.repositorios.ServiceLocator
+import com.example.familywallet.presentacion.familia.FamiliaVMFactory
+import com.example.familywallet.presentacion.familia.FamiliaViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun PantallaCrearFamilia(
-    vm: FamiliaViewModel = viewModel(),
-    onHecho: (String) -> Unit
+    onHecho: (String) -> Unit,      // recibe el id creado
 ) {
-    var nombre by remember { mutableStateOf("") }
+    var nombreFamilia by remember { mutableStateOf("") }
+    var alias by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    var cargando by remember { mutableStateOf(false) }
 
-    Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Text("Crear familia", style = MaterialTheme.typography.headlineSmall)
+    val vm: FamiliaViewModel = viewModel(
+        factory = FamiliaVMFactory(
+            familiaRepo = ServiceLocator.familiaRepo,
+            authRepo = ServiceLocator.authRepo
+        )
+    )
+    val scope = rememberCoroutineScope()
 
-            OutlinedTextField(
-                value = nombre,
-                onValueChange = { nombre = it },
-                label = { Text("Nombre de la familia") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Crear familia", style = MaterialTheme.typography.headlineSmall)
 
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        Spacer(Modifier.height(16.dp))
 
-            Button(
-                onClick = {
-                    Log.d("FW", "Click CREAR, nombre = '$nombre'")
-                    vm.crearFamilia(
-                        nombre = nombre.trim(),
-                        onOk = { famId ->
-                            Log.d("FW", "Familia creada OK => $famId")
-                            error = null
-                            onHecho(famId)
-                        },
-                        onError = { msg ->
-                            Log.e("FW", "Error creando familia en UI: $msg")
-                            error = msg
-                        }
-                    )
+        OutlinedTextField(
+            value = nombreFamilia,
+            onValueChange = { nombreFamilia = it },
+            label = { Text("Nombre de la familia") },
+            modifier = Modifier.fillMaxWidth(0.9f)
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = alias,
+            onValueChange = { alias = it },
+            label = { Text("Tu alias") },
+            modifier = Modifier.fillMaxWidth(0.9f)
+        )
+
+        error?.let {
+            Spacer(Modifier.height(8.dp))
+            Text(it, color = MaterialTheme.colorScheme.error)
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        Button(
+            onClick = {
+                scope.launch {
+                    try {
+                        val id = vm.crearFamilia(
+                            nombre = nombreFamilia,
+                            aliasOwner = alias
+                        )
+                        onHecho(id)   // OK
+                    } catch (e: Exception) {
+                        error = e.message ?: "Error al crear familia"
+                    }
                 }
-            ) { Text("Crear") }
-
+            },
+            enabled = nombreFamilia.isNotBlank() && alias.isNotBlank(),
+            modifier = Modifier
+                .fillMaxWidth(0.5f)
+                .height(50.dp)
+        ) {
+            Text("Crear")
         }
     }
 }
+
+
+
+
 
 
 

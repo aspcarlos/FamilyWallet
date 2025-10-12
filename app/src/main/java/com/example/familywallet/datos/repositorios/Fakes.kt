@@ -15,9 +15,10 @@ object FakeMovimientoRepositorio : MovimientoRepositorio {
         val cal = Calendar.getInstance()
         return movimientos.filter { mov ->
             mov.familiaId == familiaId && run {
-                cal.timeInMillis = mov.timeMillis
-                cal.get(Calendar.YEAR)  == year &&
-                        cal.get(Calendar.MONTH) == month
+                cal.timeInMillis = mov.fechaMillis
+                val y = cal.get(Calendar.YEAR)
+                val m = cal.get(Calendar.MONTH) + 1  // Calendar es 0..11 → +1
+                y == year && m == month
             }
         }
     }

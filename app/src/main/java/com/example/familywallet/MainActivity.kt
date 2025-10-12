@@ -1,7 +1,7 @@
 package com.example.familywallet
 
+import PantallaCrearFamilia
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
@@ -12,35 +12,50 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.example.familywallet.datos.repositorios.ServiceLocator
 import com.example.familywallet.presentacion.autenticacion.PantallaLogin
-import com.example.familywallet.presentacion.autenticacion.PantallaRegistro
 import com.example.familywallet.presentacion.autenticacion.PantallaOlvidoPassword
+import com.example.familywallet.presentacion.autenticacion.PantallaRegistro
 import com.example.familywallet.presentacion.familia.PantallaConfigFamilia
-import com.example.familywallet.presentacion.familia.PantallaCrearFamilia
 import com.example.familywallet.presentacion.familia.PantallaUnirseFamilia
 import com.example.familywallet.presentacion.inicio.PantallaInicio
-import com.example.familywallet.presentacion.movimientos.*
+import com.example.familywallet.presentacion.movimientos.MovimientosVMFactory
+import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
+import com.example.familywallet.presentacion.movimientos.PantallaAgregarGasto
+import com.example.familywallet.presentacion.movimientos.PantallaAgregarIngreso
+import com.example.familywallet.presentacion.movimientos.PantallaHistorial
+import com.example.familywallet.presentacion.movimientos.PantallaHistorialMes
 
+// ----------------------------
+// 📍 Rutas
+// ----------------------------
 sealed class Ruta(val route: String) {
-    data object Login         : Ruta("login")
-    data object Registro      : Ruta("registro")
-    data object Recuperar     : Ruta("recuperar")
+    data object Login : Ruta("login")
+    data object Registro : Ruta("registro")
+    data object Recuperar : Ruta("recuperar")
     data object ConfigFamilia : Ruta("config_familia")
-    data object CrearFamilia  : Ruta("crear_familia")
+    data object CrearFamilia : Ruta("crear_familia")
     data object UnirseFamilia : Ruta("unirse_familia")
 
-    data object Inicio        : Ruta("inicio/{familiaId}")
-    data object AddGasto      : Ruta("add_gasto/{familiaId}")
-    data object AddIngreso    : Ruta("add_ingreso/{familiaId}")
+    data object Inicio : Ruta("inicio/{familiaId}")
 
-    data object Historial     : Ruta("historial/{familiaId}")
-    data object HistorialMes  : Ruta("historial_mes/{familiaId}/{year}/{month}") // month 1..12
+    data object AddGasto : Ruta("add_gasto/{familiaId}")
+    data object AddIngreso : Ruta("add_ingreso/{familiaId}")
+
+    data object Historial : Ruta("historial/{familiaId}")
+    // OJO: en tu NavGraph usas "anio" y "mes" o "year" y "month".
+    // Aquí uso anio/mes como en tus capturas.
+    data object HistorialMes : Ruta("historial_mes/{familiaId}/{anio}/{mes}")
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { MaterialTheme { AppNav() } }
+        setContent {
+            MaterialTheme {
+                AppNav()
+            }
+        }
     }
 }
 
@@ -48,65 +63,64 @@ class MainActivity : ComponentActivity() {
 fun AppNav() {
     val nav = rememberNavController()
 
-    // >>> VM COMPARTIDO <<<
-    val movVM: MovimientosViewModel = viewModel()
+    // Instancia ÚNICA del VM para movimientos
+    val movimientosVM: MovimientosViewModel = viewModel(
+        factory = MovimientosVMFactory(ServiceLocator.movimientosRepo)
+    )
 
-    NavHost(navController = nav, startDestination = Ruta.Login.route) {
-
-        // LOGIN
+    NavHost(
+        navController = nav,
+        startDestination = Ruta.Login.route
+    ) {
+        // -------------------------
+        // 🔐 Auth
+        // -------------------------
         composable(Ruta.Login.route) {
             PantallaLogin(
-                onLoginOk = {
-                    nav.navigate(Ruta.ConfigFamilia.route) {
-                        popUpTo(Ruta.Login.route) { inclusive = true }
-                    }
-                },
+                onLoginOk = { nav.navigate(Ruta.ConfigFamilia.route) },
                 onRegistro = { nav.navigate(Ruta.Registro.route) },
-                onOlvido   = { nav.navigate(Ruta.Recuperar.route) }
+                onOlvido = { nav.navigate(Ruta.Recuperar.route) }
             )
         }
 
-        // REGISTRO
         composable(Ruta.Registro.route) {
             PantallaRegistro(
                 onRegistrar = { _, _ ->
-                    nav.navigate(Ruta.Login.route) {
-                        popUpTo(Ruta.Login.route) { inclusive = false }
-                        launchSingleTop = true
-                    }
+                    nav.navigate(Ruta.Login.route)
                 },
                 onVolverLogin = { nav.popBackStack() }
             )
         }
 
-        // RECUPERAR
         composable(Ruta.Recuperar.route) {
             PantallaOlvidoPassword(
-                onEnviado    = { nav.popBackStack() },
-                onVolverLogin= { nav.popBackStack() }
+                onEnviado = { nav.popBackStack() },
+                onVolverLogin = { nav.popBackStack() }
             )
         }
 
-        // CONFIG FAMILIA
+        // -------------------------
+        // 👨‍👩‍👧‍👦 Configuración de familia
+        // -------------------------
         composable(Ruta.ConfigFamilia.route) {
             PantallaConfigFamilia(
-                onCrear  = { nav.navigate(Ruta.CrearFamilia.route) },
+                onCrear = { nav.navigate(Ruta.CrearFamilia.route) },
                 onUnirse = { nav.navigate(Ruta.UnirseFamilia.route) }
             )
         }
 
-        // CREAR FAMILIA
-        composable(Ruta.CrearFamilia.route) {
+        composable(route = Ruta.CrearFamilia.route) {
             PantallaCrearFamilia(
                 onHecho = { familiaId ->
                     nav.navigate("inicio/$familiaId") {
                         popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
         }
 
-        // UNIRSE FAMILIA
+
         composable(Ruta.UnirseFamilia.route) {
             PantallaUnirseFamilia(
                 onHecho = { familiaId ->
@@ -117,98 +131,114 @@ fun AppNav() {
             )
         }
 
-        // INICIO
+        // -------------------------
+        // 🏠 Inicio (usa VM)
+        // -------------------------
         composable(
             route = Ruta.Inicio.route,
-            arguments = listOf(navArgument("familiaId"){ type = NavType.StringType })
+            arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
         ) { backStack ->
-            val familiaId = backStack.arguments?.getString("familiaId")
-            if (familiaId.isNullOrBlank()) {
-                Log.e("FW","familiaId faltante en Inicio")
-                nav.popBackStack(); return@composable
-            }
+            val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
+
             PantallaInicio(
                 familiaId = familiaId,
-                vm = movVM,
+                vm = movimientosVM,
                 onIrAddGasto   = { nav.navigate("add_gasto/$familiaId") },
                 onIrAddIngreso = { nav.navigate("add_ingreso/$familiaId") },
                 onIrHistorial  = { nav.navigate("historial/$familiaId") }
             )
         }
 
-        // ADD GASTO
+        // -------------------------
+        // ➕ Gasto (usa VM)
+        // -------------------------
         composable(
             route = Ruta.AddGasto.route,
-            arguments = listOf(navArgument("familiaId"){ type = NavType.StringType })
+            arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
+
             PantallaAgregarGasto(
                 familiaId = familiaId,
-                vm = movVM,
+                vm = movimientosVM,
                 onGuardado = {
                     nav.navigate("inicio/$familiaId") {
                         popUpTo("inicio/$familiaId") { inclusive = true }
-                        launchSingleTop = true; restoreState = true
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 }
             )
         }
 
-        // ADD INGRESO
+        // -------------------------
+        // ➕ Ingreso (usa VM)
+        // -------------------------
         composable(
             route = Ruta.AddIngreso.route,
-            arguments = listOf(navArgument("familiaId"){ type = NavType.StringType })
+            arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
+
             PantallaAgregarIngreso(
                 familiaId = familiaId,
-                vm = movVM,
+                vm = movimientosVM,
                 onGuardado = {
                     nav.navigate("inicio/$familiaId") {
                         popUpTo("inicio/$familiaId") { inclusive = true }
-                        launchSingleTop = true; restoreState = true
+                        launchSingleTop = true
+                        restoreState = true
                     }
                 }
             )
         }
 
-        // HISTORIAL (lista meses)
+        // -------------------------
+        // 📚 Historial (lista de meses) — SIN VM
+        // -------------------------
         composable(
             route = Ruta.Historial.route,
-            arguments = listOf(navArgument("familiaId"){ type = NavType.StringType })
+            arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
+
             PantallaHistorial(
                 familiaId = familiaId,
-                vm = movVM,
-                onAbrirMes = { year, month -> nav.navigate("historial_mes/$familiaId/$year/$month") },
+                onAbrirMes = { year, month ->
+                    nav.navigate("historial_mes/$familiaId/$year/$month")
+                },
                 onBack = { nav.popBackStack() }
             )
         }
 
-        // HISTORIAL MES (detalle)
+        // -------------------------
+        // 📅 Historial del mes (detalle) — CON VM
+        // -------------------------
         composable(
             route = Ruta.HistorialMes.route,
             arguments = listOf(
-                navArgument("familiaId"){ type = NavType.StringType },
-                navArgument("year"){ type = NavType.IntType },
-                navArgument("month"){ type = NavType.IntType }, // 1..12
+                navArgument("familiaId") { type = NavType.StringType },
+                navArgument("anio")      { type = NavType.IntType },
+                navArgument("mes")       { type = NavType.IntType },
             )
         ) { backStack ->
-            val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
-            val year  = backStack.arguments?.getInt("year") ?: return@composable
-            val month = backStack.arguments?.getInt("month") ?: return@composable
+            val familiaId = backStack.arguments?.getString("familiaId")
+            val year      = backStack.arguments?.getInt("anio")
+            val month     = backStack.arguments?.getInt("mes")
+            if (familiaId == null || year == null || month == null) return@composable
 
             PantallaHistorialMes(
                 familiaId = familiaId,
                 year = year,
                 month = month,
-                vm = movVM,
+                vm = movimientosVM,   // ← aquí sí pasa VM
                 onBack = { nav.popBackStack() }
             )
         }
     }
 }
+
+
 
 
 

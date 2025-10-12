@@ -1,115 +1,117 @@
 package com.example.familywallet.presentacion.movimientos
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.example.familywallet.datos.modelos.Movimiento
+import com.example.familywallet.datos.repositorios.MovimientoRepositorio
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-enum class Tipo { INGRESO, GASTO }
+class MovimientosViewModel(
+    private val repo: MovimientoRepositorio
+) : ViewModel() {
 
-data class Movimiento(
-    val familiaId: String,
-    val tipo: Tipo,
-    val cantidad: Double,
-    val categoria: String?,      // null para ingresos
-    val timeMillis: Long         // fecha en millis
-)
+    // ---- Estado que observa la UI ----
+    private val _itemsDelMesState = mutableStateOf<List<Movimiento>>(emptyList())
+    val itemsDelMesState: State<List<Movimiento>> = _itemsDelMesState
 
-class MovimientosViewModel : ViewModel() {
-
-    private val _lista = mutableStateListOf<Movimiento>()
-    val lista: List<Movimiento> get() = _lista
-
-    var totalIngresos by mutableStateOf(0.0)
+    var totalIngresos by mutableDoubleStateOf(0.0)
         private set
-    var totalGastos by mutableStateOf(0.0)
+    var totalGastos by mutableDoubleStateOf(0.0)
         private set
 
-    /** Recalcula totales del **mes actual** del dispositivo para una familia */
+    // Mes/año actuales cargados (para recargar después de insertar)
+    private var yearActual: Int = 0
+    private var monthActual: Int = 0  // 1..12
+
+    // ---- Cargas ----
     fun cargarMesActual(familiaId: String) {
         val cal = Calendar.getInstance()
-        val y = cal.get(Calendar.YEAR)
-        val m0 = cal.get(Calendar.MONTH) // 0..11
-
-        val delMes = _lista.filter {
-            it.familiaId == familiaId && esMismoMes(it.timeMillis, y, m0)
-        }
-        totalIngresos = delMes.filter { it.tipo == Tipo.INGRESO }.sumOf { it.cantidad }
-        totalGastos   = delMes.filter { it.tipo == Tipo.GASTO   }.sumOf { it.cantidad }
+        cargarMes(familiaId, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1)
     }
 
+    fun cargarMes(familiaId: String, year: Int, month: Int) {
+        yearActual = year
+        monthActual = month
+        viewModelScope.launch {
+            val lista = repo.movimientosDeMes(familiaId, year, month)
+            _itemsDelMesState.value = lista
+            totalIngresos = lista.filter { it.tipo == Movimiento.Tipo.INGRESO }
+                .sumOf { it.cantidad }
+            totalGastos = lista.filter { it.tipo == Movimiento.Tipo.GASTO }
+                .sumOf { it.cantidad }
+        }
+    }
+
+    // ---- Inserciones ----
     fun agregarGasto(
         familiaId: String,
         cantidad: Double,
-        categoria: String,
-        fechaMillis: Long = System.currentTimeMillis()
+        categoria: String?,
+        fechaMillis: Long
     ) {
-        _lista.add(
-            Movimiento(
+        viewModelScope.launch {
+            val mov = Movimiento(
+                id = "",                // el repo lo rellena si usa Firestore
                 familiaId = familiaId,
-                tipo = Tipo.GASTO,
                 cantidad = cantidad,
                 categoria = categoria,
-                timeMillis = fechaMillis
+                fechaMillis = fechaMillis,
+                tipo = Movimiento.Tipo.GASTO
             )
-        )
-        cargarMesActual(familiaId)
+            repo.agregarMovimiento(mov)
+            // Recarga el mismo mes que está viendo el usuario
+            cargarMes(familiaId, yearActualOrNow(), monthActualOrNow())
+        }
     }
 
     fun agregarIngreso(
         familiaId: String,
         cantidad: Double,
-        fechaMillis: Long = System.currentTimeMillis()
+        categoria: String?,
+        fechaMillis: Long
     ) {
-        _lista.add(
-            Movimiento(
+        viewModelScope.launch {
+            val mov = Movimiento(
+                id = "",
                 familiaId = familiaId,
-                tipo = Tipo.INGRESO,
                 cantidad = cantidad,
-                categoria = null,
-                timeMillis = fechaMillis
+                categoria = categoria,
+                fechaMillis = fechaMillis,
+                tipo = Movimiento.Tipo.INGRESO
             )
-        )
-        cargarMesActual(familiaId)
+            repo.agregarMovimiento(mov)
+            cargarMes(familiaId, yearActualOrNow(), monthActualOrNow())
+        }
     }
 
-    /** Devuelve los movimientos de un mes concreto (month = 1..12) */
-    fun movimientosDeMes(familiaId: String, year: Int, month: Int): List<Movimiento> {
-        val m0 = month - 1 // Calendar.MONTH es 0..11
-        val cal = Calendar.getInstance()
-        return _lista.filter { mov ->
-            mov.familiaId == familiaId && cal.run {
-                timeInMillis = mov.timeMillis
-                get(Calendar.YEAR) == year && get(Calendar.MONTH) == m0
-            }
-        }.sortedByDescending { it.timeMillis }
-    }
-
-    /** Comprueba si un instante cae en el año/mes dados (mes 0-based). */
-    private fun esMismoMes(millis: Long, year: Int, month0: Int): Boolean {
-        val c = Calendar.getInstance().apply { timeInMillis = millis }
-        return c.get(Calendar.YEAR) == year && c.get(Calendar.MONTH) == month0
-    }
-
-    /** Nombre del mes actual, útil para cabeceras */
+    // ---- Utilidades para la UI ----
     fun nombreMesActual(): String {
-        val c = Calendar.getInstance()
-        val mes = c.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault()) ?: ""
-        val year = c.get(Calendar.YEAR)
-        return mes.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() } +
-                " $year"
+        val y = yearActualOrNow()
+        val m = monthActualOrNow() // 1..12
+        val cal = Calendar.getInstance().apply {
+            set(Calendar.YEAR, y)
+            set(Calendar.MONTH, m - 1)
+            set(Calendar.DAY_OF_MONTH, 1)
+        }
+        val fmt = SimpleDateFormat("LLLL yyyy", Locale("es", "ES"))
+        // Capitaliza la primera letra (opcional)
+        return fmt.format(cal.time).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "ES")) else it.toString() }
     }
 
-    fun fechaHoyDiaMes(): String {
-        val c = Calendar.getInstance()
-        val dia = c.get(Calendar.DAY_OF_MONTH)
-        val mes = c.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.getDefault()) ?: ""
-        return "$dia ${mes.lowercase(Locale.getDefault())}"
-    }
+    private fun yearActualOrNow(): Int =
+        if (yearActual == 0) Calendar.getInstance().get(Calendar.YEAR) else yearActual
+
+    private fun monthActualOrNow(): Int =
+        if (monthActual == 0) Calendar.getInstance().get(Calendar.MONTH) + 1 else monthActual
 }
+
+
+
+
 
 
 

@@ -13,8 +13,7 @@ import java.util.Locale
 @Composable
 fun PantallaHistorial(
     familiaId: String,
-    vm: MovimientosViewModel,
-    onAbrirMes: (year: Int, month: Int) -> Unit,
+    onAbrirMes: (Int, Int) -> Unit,
     onBack: () -> Unit
 ) {
     val c = Calendar.getInstance()

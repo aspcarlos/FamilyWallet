@@ -20,14 +20,13 @@ fun PantallaConfigFamilia(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(24.dp)
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "Configurar familia",
+                text = "Configuración Familia",
                 style = MaterialTheme.typography.headlineMedium
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = onCrear,
@@ -49,5 +48,6 @@ fun PantallaConfigFamilia(
         }
     }
 }
+
 
 

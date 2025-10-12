@@ -1,17 +1,19 @@
 package com.example.familywallet.datos.modelos
 
-import java.util.UUID
-
-enum class TipoMov { INGRESO, GASTO }
-
 data class Movimiento(
-    val id: String = UUID.randomUUID().toString(),
+    val id: String = "",
     val familiaId: String,
-    val tipo: TipoMov,
     val cantidad: Double,
-    val categoria: String? = null,
-    val timeMillis: Long = System.currentTimeMillis()
-)
+    val categoria: String?,      // puede ser null en ingresos
+    val fechaMillis: Long,       // <-- clave consistente en todo el código
+    val tipo: Tipo
+) {
+    enum class Tipo { GASTO, INGRESO }
+}
+
+
+
+
 
 
 

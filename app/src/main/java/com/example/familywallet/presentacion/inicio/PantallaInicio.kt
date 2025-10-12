@@ -6,6 +6,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.familywallet.datos.repositorios.ServiceLocator
+import com.example.familywallet.presentacion.movimientos.MovimientosVMFactory
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
 import java.text.NumberFormat
 import java.util.Locale
@@ -18,11 +21,22 @@ fun PantallaInicio(
     onIrAddIngreso: () -> Unit,
     onIrHistorial: () -> Unit
 ) {
-    // Recalcula al volver / al cambiar la lista
-    LaunchedEffect(familiaId, vm.lista.size) { vm.cargarMesActual(familiaId) }
+    // ✅ Crear el ViewModel con la factory conectada a Firebase
+    val vm: MovimientosViewModel = viewModel(
+        factory = MovimientosVMFactory(ServiceLocator.movimientosRepo)
+    )
 
-    val moneda = remember { NumberFormat.getCurrencyInstance(Locale("es","ES")) }
+    val items by vm.itemsDelMesState
 
+    // ✅ Cargar datos al abrir o cambiar familia
+    LaunchedEffect(familiaId) {
+        vm.cargarMesActual(familiaId)
+    }
+
+    // Formato de moneda
+    val moneda = remember { NumberFormat.getCurrencyInstance(Locale("es", "ES")) }
+
+    // Contenido principal
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -32,7 +46,10 @@ fun PantallaInicio(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            Text(vm.nombreMesActual(), style = MaterialTheme.typography.headlineSmall)
+            Text(
+                vm.nombreMesActual(),
+                style = MaterialTheme.typography.headlineSmall
+            )
 
             Text("Ingresos: ${moneda.format(vm.totalIngresos)}")
             Text("Gastos:   ${moneda.format(vm.totalGastos)}")
@@ -41,12 +58,17 @@ fun PantallaInicio(
             Text(
                 "Resumen: ${moneda.format(resumen)}",
                 style = MaterialTheme.typography.headlineMedium,
-                color = if (resumen < 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                color = if (resumen < 0)
+                    MaterialTheme.colorScheme.error
+                else
+                    MaterialTheme.colorScheme.primary
             )
 
             Spacer(Modifier.height(8.dp))
 
-            OutlinedButton(onClick = onIrHistorial) { Text("Ver historial") }
+            OutlinedButton(onClick = onIrHistorial) {
+                Text("Ver historial")
+            }
         }
     }
 
@@ -62,6 +84,7 @@ fun PantallaInicio(
         ElevatedButton(onClick = onIrAddIngreso) { Text("Añadir ingreso") }
     }
 }
+
 
 
 
