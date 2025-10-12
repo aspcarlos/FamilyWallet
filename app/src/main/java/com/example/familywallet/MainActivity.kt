@@ -5,7 +5,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -13,14 +17,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.familywallet.datos.repositorios.ServiceLocator
+
 import com.example.familywallet.presentacion.autenticacion.PantallaLogin
 import com.example.familywallet.presentacion.autenticacion.PantallaOlvidoPassword
 import com.example.familywallet.presentacion.autenticacion.PantallaRegistro
+
 import com.example.familywallet.presentacion.familia.FamiliaVMFactory
 import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import com.example.familywallet.presentacion.familia.PantallaConfigFamilia
 import com.example.familywallet.presentacion.familia.PantallaUnirseFamilia
+
+import com.example.familywallet.presentacion.inicio.PantallaCategorias
+import com.example.familywallet.presentacion.inicio.PantallaConfiguracion
 import com.example.familywallet.presentacion.inicio.PantallaInicio
+
 import com.example.familywallet.presentacion.movimientos.MovimientosVMFactory
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
 import com.example.familywallet.presentacion.movimientos.PantallaAgregarGasto
@@ -46,41 +56,53 @@ sealed class Ruta(val route: String) {
 
     data object Historial : Ruta("historial/{familiaId}")
     data object HistorialMes : Ruta("historial_mes/{familiaId}/{anio}/{mes}")
+
+    object Configuracion : Ruta("configuracion")
+    object Categorias : Ruta("categorias")
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MaterialTheme {
-                AppNav()
+            // Estado del tema a nivel de app
+            var isDark by rememberSaveable { mutableStateOf(false) }
+
+            MaterialTheme(colorScheme = if (isDark) darkColorScheme() else lightColorScheme()) {
+                AppNav(
+                    isDark = isDark,
+                    onToggleDark = { isDark = !isDark }
+                )
             }
         }
     }
 }
 
 @Composable
-fun AppNav() {
+fun AppNav(
+    isDark: Boolean,
+    onToggleDark: () -> Unit
+) {
     val nav = rememberNavController()
 
-    // VM de movimientos (ya lo tenías parecido)
+    // VM de movimientos
     val movimientosVM: MovimientosViewModel = viewModel(
         factory = MovimientosVMFactory(ServiceLocator.movimientosRepo)
     )
 
-    // ✅ VM de familia (faltaba)
-    val familiaVM: FamiliaViewModel = viewModel(factory = FamiliaVMFactory(
-        familiaRepo = ServiceLocator.familiaRepo,
-        authRepo = ServiceLocator.authRepo
-    ))
+    // VM de familia
+    val familiaVM: FamiliaViewModel = viewModel(
+        factory = FamiliaVMFactory(
+            familiaRepo = ServiceLocator.familiaRepo,
+            authRepo = ServiceLocator.authRepo
+        )
+    )
 
     NavHost(
         navController = nav,
         startDestination = Ruta.Login.route
     ) {
-        // -------------------------
         // 🔐 Auth
-        // -------------------------
         composable(Ruta.Login.route) {
             PantallaLogin(
                 onLoginOk = { nav.navigate(Ruta.ConfigFamilia.route) },
@@ -91,9 +113,7 @@ fun AppNav() {
 
         composable(Ruta.Registro.route) {
             PantallaRegistro(
-                onRegistrar = { _, _ ->
-                    nav.navigate(Ruta.Login.route)
-                },
+                onRegistrar = { _, _ -> nav.navigate(Ruta.Login.route) },
                 onVolverLogin = { nav.popBackStack() }
             )
         }
@@ -105,10 +125,8 @@ fun AppNav() {
             )
         }
 
-        // -------------------------
-        // 👨‍👩‍👧‍👦 Configuración de familia
-        // -------------------------
-        composable(route = Ruta.ConfigFamilia.route) {
+        // 👨‍👩‍👧‍👦 Config familia
+        composable(Ruta.ConfigFamilia.route) {
             PantallaConfigFamilia(
                 vm = familiaVM,
                 onIrALaFamilia = { familiaId ->
@@ -118,7 +136,6 @@ fun AppNav() {
                     }
                 },
                 onIrLogin = {
-                    // regresa al login “limpiando” la config de familia del back stack
                     nav.navigate(Ruta.Login.route) {
                         popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
                         launchSingleTop = true
@@ -127,7 +144,6 @@ fun AppNav() {
                 onCrear = { nav.navigate(Ruta.CrearFamilia.route) },
                 onUnirse = { nav.navigate(Ruta.UnirseFamilia.route) },
                 onAtras = {
-                    // “Atrás” desde Config → Login
                     nav.navigate(Ruta.Login.route) {
                         popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
                         launchSingleTop = true
@@ -136,7 +152,7 @@ fun AppNav() {
             )
         }
 
-        composable(route = Ruta.CrearFamilia.route) {
+        composable(Ruta.CrearFamilia.route) {
             PantallaCrearFamilia(
                 vm = familiaVM,
                 onHecho = { familiaId ->
@@ -159,12 +175,29 @@ fun AppNav() {
             )
         }
 
-        // -------------------------
-        // 🏠 Inicio (usa VM)
-        // -------------------------
+        // ⚙️ Configuración (tema oscuro)
+        composable(Ruta.Configuracion.route) {
+            PantallaConfiguracion(
+                isDark = isDark,
+                onToggleDark = onToggleDark,
+                onBack = { nav.popBackStack() }
+            )
+        }
+
+
+        // 🏷️ Categorías
+        composable(Ruta.Categorias.route) {
+            PantallaCategorias(
+                vm = movimientosVM,
+                onBack = { nav.popBackStack() }
+            )
+        }
+
+
+        // 🏠 Inicio
         composable(
-            route = "inicio/{familiaId}",
-            arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
+            route = Ruta.Inicio.route, // ✅ ya incluye {familiaId}
+            arguments = listOf(navArgument("familiaId"){ type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
 
@@ -174,27 +207,23 @@ fun AppNav() {
                 onIrAddGasto = { nav.navigate("add_gasto/$familiaId") },
                 onIrAddIngreso = { nav.navigate("add_ingreso/$familiaId") },
                 onIrHistorial = { nav.navigate("historial/$familiaId") },
-
-                // ✅ Botón "Atrás" que vuelve a ConfigFamilia
                 onBackToConfig = {
                     nav.navigate(Ruta.ConfigFamilia.route) {
-                        // sacamos esta pantalla del back stack
                         popUpTo("inicio/$familiaId") { inclusive = true }
                         launchSingleTop = true
                     }
-                }
+                },
+                onAbrirConfiguracion = { nav.navigate(Ruta.Configuracion.route) },
+                onVerCategorias = { nav.navigate(Ruta.Categorias.route) }
             )
         }
 
-        // -------------------------
-        // ➕ Gasto (usa VM)
-        // -------------------------
+        // ➕ Gasto
         composable(
             route = Ruta.AddGasto.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
-
             PantallaAgregarGasto(
                 familiaId = familiaId,
                 vm = movimientosVM,
@@ -208,15 +237,12 @@ fun AppNav() {
             )
         }
 
-        // -------------------------
-        // ➕ Ingreso (usa VM)
-        // -------------------------
+        // ➕ Ingreso
         composable(
             route = Ruta.AddIngreso.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
-
             PantallaAgregarIngreso(
                 familiaId = familiaId,
                 vm = movimientosVM,
@@ -230,15 +256,12 @@ fun AppNav() {
             )
         }
 
-        // -------------------------
-        // 📚 Historial (lista de meses) — SIN VM
-        // -------------------------
+        // 📚 Historial (lista de meses)
         composable(
             route = Ruta.Historial.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
-
             PantallaHistorial(
                 familiaId = familiaId,
                 onAbrirMes = { year, month ->
@@ -248,9 +271,7 @@ fun AppNav() {
             )
         }
 
-        // -------------------------
-        // 📅 Historial del mes (detalle) — CON VM
-        // -------------------------
+        // 📅 Historial del mes (detalle)
         composable(
             route = Ruta.HistorialMes.route,
             arguments = listOf(
@@ -260,20 +281,21 @@ fun AppNav() {
             )
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId")
-            val year      = backStack.arguments?.getInt("anio")
-            val month     = backStack.arguments?.getInt("mes")
+            val year = backStack.arguments?.getInt("anio")
+            val month = backStack.arguments?.getInt("mes")
             if (familiaId == null || year == null || month == null) return@composable
 
             PantallaHistorialMes(
                 familiaId = familiaId,
                 year = year,
                 month = month,
-                vm = movimientosVM,   // ← aquí sí pasa VM
+                vm = movimientosVM,
                 onBack = { nav.popBackStack() }
             )
         }
     }
 }
+
 
 
 

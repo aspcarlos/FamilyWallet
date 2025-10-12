@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.androidx.foundation)
     implementation(libs.androidx.runtime.saveable)
     implementation(libs.androidx.foundation.layout)
+    implementation(libs.androidx.runtime)
 
     // Tests
     testImplementation(libs.junit)
