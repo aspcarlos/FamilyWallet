@@ -1,13 +1,26 @@
 package com.example.familywallet.presentacion.movimientos
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import com.example.familywallet.datos.modelos.Movimiento
-import java.text.NumberFormat
+import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Locale
+import kotlin.math.abs
+
+@Composable
+private fun FechaCorta(millis: Long): String {
+    val fmt = remember { SimpleDateFormat("dd MMM yyyy", Locale("es", "ES")) }
+    return fmt.format(Date(millis))
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,57 +31,42 @@ fun PantallaHistorialMes(
     vm: MovimientosViewModel,
     onBack: () -> Unit
 ) {
-    // Cargar/recargar datos del mes seleccionado
-    LaunchedEffect(familiaId, year, month) {
-        vm.cargarMes(familiaId, year, month)
-    }
-
-    // Obtén la lista del VM (StateFlow/LiveData o simple State)
-    // Adapta esta línea a cómo lo tengas:
-    // Si usas StateFlow:
-    // val items by vm.itemsDelMes.collectAsState()
-    // Si usas un State interno del VM:
-    val items by vm.itemsDelMesState
-
-    val moneda = remember { NumberFormat.getCurrencyInstance(Locale("es", "ES")) }
+    val items = vm.itemsDelMesState.value
+    val formatter = rememberCurrencyFormatter(vm.monedaActual)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detalle • %04d/%02d".format(year, month)) },
+                title = { Text("Detalle • $year/$month") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Text("<") }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
+                    }
                 }
             )
         }
     ) { inner ->
-        Column(
+        LazyColumn(
             modifier = Modifier
+                .fillMaxSize()
                 .padding(inner)
-                .fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (items.isEmpty()) {
-                Text("No hay movimientos en este mes.")
-            } else {
-                items.forEach { mov: Movimiento ->
-                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                        Column(Modifier.padding(12.dp)) {
-                            Text(
-                                text = if (mov.tipo == Movimiento.Tipo.GASTO) "Gasto" else "Ingreso",
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                            Text("Cantidad: ${moneda.format(mov.cantidad)}")
-                            mov.categoria?.let { Text("Categoría: $it") }
-                            // Si quieres mostrar fecha:
-                            // Text("Fecha: " + vm.formatoFechaCorta(mov.fechaMillis))
-                        }
+            items(items) { mov ->
+                ListItem(
+                    headlineContent = { Text(mov.categoria ?: "Movimiento") },
+                    supportingContent = { Text(FechaCorta(mov.fechaMillis)) },
+                    trailingContent = {
+                        val sign = if (mov.tipo == Movimiento.Tipo.GASTO) -1 else 1
+                        Text(formatter.format(sign * abs(mov.cantidad)))
                     }
-                }
+                )
+                Divider()
             }
         }
     }
 }
+
+
 
 
 

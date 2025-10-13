@@ -1,17 +1,17 @@
 package com.example.familywallet.presentacion.inicio
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.example.familywallet.datos.modelos.Movimiento
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
-import com.example.familywallet.datos.modelos.Movimiento // usa tu paquete real de Movimiento
-import java.text.NumberFormat
-import java.util.Locale
+import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -19,55 +19,61 @@ fun PantallaCategorias(
     vm: MovimientosViewModel,
     onBack: () -> Unit
 ) {
-    // Lista del mes ya cargada por PantallaInicio (reactiva)
-    val items by vm.itemsDelMesState  // <- tu State<List<Movimiento>> del VM
+    // Formateador de moneda reactivo al cambio de vm.monedaActual
+    val formatter = rememberCurrencyFormatter(vm.monedaActual)
 
-    val moneda = remember { NumberFormat.getCurrencyInstance(Locale("es", "ES")) }
+    // Lista reactiva del mes
+    val items by vm.itemsDelMesState
 
-    // Tus categorías “fijas”
-    val categorias = listOf(
-        "automóvil","casa","comida","comunicaciones","deportes","entretenimiento",
-        "facturas","higiene","mascotas","regalos","restaurante","ropa","salud","taxi","transporte"
-    )
-
-    // Totales por categoría SOLO de GASTOS del mes (reactivo: se recalcula cuando 'items' cambia)
-    val totalesPorCategoria: Map<String, Double> = remember(items) {
+    // Totales de GASTO por categoría (se recalcula cuando 'items' cambia)
+    val totalesPorCategoria = remember(items) {
         items
             .asSequence()
-            .filter { it.tipo == Movimiento.Tipo.GASTO }
+            .filter { it.tipo == Movimiento.Tipo.GASTO }      // si tu 'tipo' es String, usa: it.tipo == "GASTO"
             .groupBy { it.categoria ?: "otros" }
-            .mapValues { (_, lista) -> lista.sumOf { it.cantidad } }
+            .map { (categoria, lista) ->                      // devolvemos Pair(categoria,total)
+                categoria to lista.sumOf { it.cantidad }
+            }
+            .sortedBy { it.first }                             // opcional: orden alfabético
     }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("Categorías de gasto") }
-            )
+            TopAppBar(title = { Text("Categorías de gasto") })
+        },
+        bottomBar = {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.Start
+            ) {
+                OutlinedButton(onClick = onBack) { Text("Atrás") }
+            }
         }
     ) { inner ->
-        Box(Modifier.fillMaxSize().padding(inner)) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp) // hueco para el botón Atrás
-            ) {
-                items(categorias) { c ->
-                    val total = totalesPorCategoria[c] ?: 0.0
-                    ListItem(
-                        headlineContent = { Text(c) },
-                        trailingContent = { Text(moneda.format(total)) }
-                    )
-                    Divider()
-                }
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            items(totalesPorCategoria, key = { it.first }) { (categoria, total) ->
+                ListItem(
+                    headlineContent = { Text(categoria) },
+                    trailingContent = {
+                        Text(
+                            text = formatter.format(total),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                )
+                Divider()
             }
-
-            OutlinedButton(
-                onClick = onBack,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(16.dp)
-            ) { Text("Atrás") }
         }
     }
 }
+
+
+
 

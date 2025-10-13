@@ -72,6 +72,7 @@ dependencies {
     implementation(libs.androidx.runtime.saveable)
     implementation(libs.androidx.foundation.layout)
     implementation(libs.androidx.runtime)
+    implementation(libs.androidx.room.ktx)
 
     // Tests
     testImplementation(libs.junit)

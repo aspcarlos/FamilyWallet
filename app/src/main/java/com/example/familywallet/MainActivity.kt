@@ -30,6 +30,7 @@ import com.example.familywallet.presentacion.familia.PantallaUnirseFamilia
 import com.example.familywallet.presentacion.inicio.PantallaCategorias
 import com.example.familywallet.presentacion.inicio.PantallaConfiguracion
 import com.example.familywallet.presentacion.inicio.PantallaInicio
+import com.example.familywallet.presentacion.inicio.PantallaMoneda
 
 import com.example.familywallet.presentacion.movimientos.MovimientosVMFactory
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
@@ -59,6 +60,7 @@ sealed class Ruta(val route: String) {
 
     object Configuracion : Ruta("configuracion")
     object Categorias : Ruta("categorias")
+    object Moneda : Ruta("moneda")
 }
 
 class MainActivity : ComponentActivity() {
@@ -184,6 +186,16 @@ fun AppNav(
             )
         }
 
+        composable(route = Ruta.Moneda.route) {
+            PantallaMoneda(
+                vm = movimientosVM,
+                onGuardar = { nueva ->
+                    movimientosVM.cambiarMoneda(nueva)
+                    nav.popBackStack()
+                },
+                onBack = { nav.popBackStack() }
+            )
+        }
 
         // 🏷️ Categorías
         composable(Ruta.Categorias.route) {
@@ -192,7 +204,6 @@ fun AppNav(
                 onBack = { nav.popBackStack() }
             )
         }
-
 
         // 🏠 Inicio
         composable(
@@ -209,13 +220,15 @@ fun AppNav(
                 onIrHistorial = { nav.navigate("historial/$familiaId") },
                 onBackToConfig = {
                     nav.navigate(Ruta.ConfigFamilia.route) {
-                        popUpTo("inicio/$familiaId") { inclusive = true }
+                        popUpTo(Ruta.Inicio.route + "/$familiaId") { inclusive = true }
                         launchSingleTop = true
                     }
                 },
                 onAbrirConfiguracion = { nav.navigate(Ruta.Configuracion.route) },
-                onVerCategorias = { nav.navigate(Ruta.Categorias.route) }
+                onVerCategorias     = { nav.navigate(Ruta.Categorias.route) },
+                onCambiarMoneda     = { nav.navigate(Ruta.Moneda.route) } // <- ya no rompe
             )
+
         }
 
         // ➕ Gasto

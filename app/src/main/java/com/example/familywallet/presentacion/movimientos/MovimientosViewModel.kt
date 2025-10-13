@@ -14,39 +14,91 @@ class MovimientosViewModel(
     private val repo: MovimientoRepositorio
 ) : ViewModel() {
 
-    // ---- Estado que observa la UI ----
+    // ------------------------------
+    // Estado
+    // ------------------------------
     private val _itemsDelMesState = mutableStateOf<List<Movimiento>>(emptyList())
-    val itemsDelMesState: State<List<Movimiento>> = _itemsDelMesState
+    val itemsDelMesState: State<List<Movimiento>> get() = _itemsDelMesState
 
-    var totalIngresos by mutableDoubleStateOf(0.0)
-        private set
-    var totalGastos by mutableDoubleStateOf(0.0)
+    var monedaActual by mutableStateOf("EUR")
         private set
 
-    // Mes/año actuales cargados (para recargar después de insertar)
+    var totalIngresos by mutableStateOf(0.0)
+        private set
+    var totalGastos by mutableStateOf(0.0)
+        private set
+
+    // Mes/año cargados (para recargar tras insertar)
     private var yearActual: Int = 0
-    private var monthActual: Int = 0  // 1..12
+    private var monthActual: Int = 0
 
-    // ---- Cargas ----
+    // ------------------------------
+    // Moneda (tasas de ejemplo)
+    // ------------------------------
+    private val conversionRates = mapOf(
+        "EUR" to 1.0,
+        "USD" to 1.08,
+        "GBP" to 0.85,
+        "JPY" to 161.3,
+        "MXN" to 19.5
+    )
+
+    fun cambiarMoneda(nueva: String) {
+        val tasaNueva = conversionRates[nueva] ?: 1.0
+        val tasaVieja = conversionRates[monedaActual] ?: 1.0
+        val factor = tasaNueva / tasaVieja
+
+        // Convertir todas las cantidades del mes actual
+        val convertida = _itemsDelMesState.value.map { mov ->
+            mov.copy(cantidad = mov.cantidad * factor)
+        }
+        _itemsDelMesState.value = convertida
+
+        monedaActual = nueva
+        recomputarTotales()
+    }
+
+    // ------------------------------
+    // Totales
+    // ------------------------------
+    private fun recomputarTotales() {
+        val lista = _itemsDelMesState.value
+
+        totalIngresos = lista
+            .filter { it.tipo == Movimiento.Tipo.INGRESO }
+            .sumOf { it.cantidad }
+
+        totalGastos = lista
+            .filter { it.tipo == Movimiento.Tipo.GASTO }
+            .sumOf { it.cantidad }
+    }
+
+    // ------------------------------
+    // Cargas
+    // ------------------------------
     fun cargarMesActual(familiaId: String) {
         val cal = Calendar.getInstance()
-        cargarMes(familiaId, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1)
+        cargarMes(
+            familiaId = familiaId,
+            year = cal.get(Calendar.YEAR),
+            month = cal.get(Calendar.MONTH) + 1
+        )
     }
 
     fun cargarMes(familiaId: String, year: Int, month: Int) {
         yearActual = year
         monthActual = month
+
         viewModelScope.launch {
             val lista = repo.movimientosDeMes(familiaId, year, month)
             _itemsDelMesState.value = lista
-            totalIngresos = lista.filter { it.tipo == Movimiento.Tipo.INGRESO }
-                .sumOf { it.cantidad }
-            totalGastos = lista.filter { it.tipo == Movimiento.Tipo.GASTO }
-                .sumOf { it.cantidad }
+            recomputarTotales()
         }
     }
 
-    // ---- Inserciones ----
+    // ------------------------------
+    // Inserciones
+    // ------------------------------
     fun agregarGasto(
         familiaId: String,
         cantidad: Double,
@@ -55,7 +107,7 @@ class MovimientosViewModel(
     ) {
         viewModelScope.launch {
             val mov = Movimiento(
-                id = "",                // el repo lo rellena si usa Firestore
+                id = "", // lo rellenará el repo si aplica
                 familiaId = familiaId,
                 cantidad = cantidad,
                 categoria = categoria,
@@ -63,7 +115,6 @@ class MovimientosViewModel(
                 tipo = Movimiento.Tipo.GASTO
             )
             repo.agregarMovimiento(mov)
-            // Recarga el mismo mes que está viendo el usuario
             cargarMes(familiaId, yearActualOrNow(), monthActualOrNow())
         }
     }
@@ -88,7 +139,9 @@ class MovimientosViewModel(
         }
     }
 
-    // ---- Utilidades para la UI ----
+    // ------------------------------
+    // Utilidades UI
+    // ------------------------------
     fun nombreMesActual(): String {
         val y = yearActualOrNow()
         val m = monthActualOrNow() // 1..12
@@ -98,8 +151,8 @@ class MovimientosViewModel(
             set(Calendar.DAY_OF_MONTH, 1)
         }
         val fmt = SimpleDateFormat("LLLL yyyy", Locale("es", "ES"))
-        // Capitaliza la primera letra (opcional)
-        return fmt.format(cal.time).replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "ES")) else it.toString() }
+        return fmt.format(cal.time)
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "ES")) else it.toString() }
     }
 
     private fun yearActualOrNow(): Int =
@@ -108,6 +161,7 @@ class MovimientosViewModel(
     private fun monthActualOrNow(): Int =
         if (monthActual == 0) Calendar.getInstance().get(Calendar.MONTH) + 1 else monthActual
 }
+
 
 
 
