@@ -23,6 +23,16 @@ object FakeMovimientoRepositorio : MovimientoRepositorio {
         }
     }
 
+    override suspend fun movimientosEntre(
+        familiaId: String,
+        inicioMillis: Long,
+        finMillis: Long
+    ): List<Movimiento> {
+        return movimientos.filter { mov ->
+            mov.familiaId == familiaId && mov.fechaMillis in inicioMillis..finMillis
+        }
+    }
+
     override suspend fun agregarMovimiento(m: Movimiento): Movimiento {
         movimientos.add(m)
         return m

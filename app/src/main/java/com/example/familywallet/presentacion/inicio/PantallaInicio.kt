@@ -1,5 +1,6 @@
 package com.example.familywallet.presentacion.inicio
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -7,17 +8,51 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
-import java.text.NumberFormat
-import java.util.*
+import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
+import com.example.familywallet.presentacion.ui.rangoAnioActual
+import com.example.familywallet.presentacion.ui.rangoDiaActual
+import com.example.familywallet.presentacion.ui.rangoMesActual
+import com.example.familywallet.presentacion.ui.rangoSemanaActual
+import java.util.Locale
 
 @Composable
-private fun rememberCurrencyFormatter(currencyCode: String): NumberFormat {
-    return remember(currencyCode) {
-        NumberFormat.getCurrencyInstance().apply {
-            currency = Currency.getInstance(currencyCode)
-        }
+private fun TriLinesIcon(modifier: Modifier = Modifier) {
+    // Leer colores del tema en el contexto @Composable
+    val lineColor = MaterialTheme.colorScheme.onSurface
+
+    Canvas(modifier = modifier.size(24.dp)) {
+        val h = size.height
+        val w = size.width
+        val stroke = 3f
+
+        // 1ª línea (más larga)
+        drawLine(
+            color = lineColor,
+            start = Offset(w * 0.25f, h * 0.30f),
+            end   = Offset(w * 0.95f, h * 0.30f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round
+        )
+        // 2ª línea
+        drawLine(
+            color = lineColor,
+            start = Offset(w * 0.40f, h * 0.50f),
+            end   = Offset(w * 0.95f, h * 0.50f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round
+        )
+        // 3ª línea (más corta)
+        drawLine(
+            color = lineColor,
+            start = Offset(w * 0.55f, h * 0.70f),
+            end   = Offset(w * 0.95f, h * 0.70f),
+            strokeWidth = stroke,
+            cap = StrokeCap.Round
+        )
     }
 }
 
@@ -35,112 +70,168 @@ fun PantallaInicio(
     onVerCategorias: () -> Unit,
     appName: String = "FamilyWallet"
 ) {
-    // 1) Cargar datos al entrar / cambiar familia
-    LaunchedEffect(familiaId) {
-        vm.cargarMesActual(familiaId)
-    }
+    LaunchedEffect(familiaId) { vm.cargarMesActual(familiaId) }
 
-    // 2) Estado y formateador
-    val items by vm.itemsDelMesState
     val ingresos = vm.totalIngresos
     val gastos   = vm.totalGastos
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
 
-    // 3) Menú del AppBar
-    var menuAbierto by remember { mutableStateOf(false) }
+    val locale = Locale("es", "ES")
+    var menuPeriodoAbierto  by remember { mutableStateOf(false) }
+    var menuOpcionesAbierto by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title = { Text("FamilyWallet") },
+            // Título vacío: la fecha ya no va aquí
+            CenterAlignedTopAppBar(
+                navigationIcon = {
+                    Text(
+                        text = appName,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(start = 16.dp)
+                    )
+                },
+                title = {}, // <- vacío para que no aparezca texto centrado en el AppBar
                 actions = {
-                    IconButton(onClick = { menuAbierto = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = null)
+                    // 3 líneas (periodo)
+                    Box {
+                        IconButton(onClick = { menuPeriodoAbierto = true }) { TriLinesIcon() }
+                        DropdownMenu(
+                            expanded = menuPeriodoAbierto,
+                            onDismissRequest = { menuPeriodoAbierto = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Día") },
+                                onClick = {
+                                    vm.aplicarRango(familiaId, rangoDiaActual(locale))
+                                    menuPeriodoAbierto = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Semana") },
+                                onClick = {
+                                    vm.aplicarRango(familiaId, rangoSemanaActual(locale))
+                                    menuPeriodoAbierto = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Mes") },
+                                onClick = {
+                                    vm.aplicarRango(familiaId, rangoMesActual(locale))
+                                    menuPeriodoAbierto = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Año") },
+                                onClick = {
+                                    vm.aplicarRango(familiaId, rangoAnioActual(locale))
+                                    menuPeriodoAbierto = false
+                                }
+                            )
+                        }
                     }
-                    DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
-                        DropdownMenuItem(
-                            text = { Text("Categorías de gastos") },
-                            onClick = {
-                                menuAbierto = false
-                                onVerCategorias()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Configuración") },
-                            onClick = {
-                                menuAbierto = false
-                                onAbrirConfiguracion()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Moneda") },
-                            onClick = {
-                                menuAbierto = false
-                                onCambiarMoneda()    // <-- aquí lo usamos
-                            }
-                        )
+
+                    Spacer(Modifier.width(4.dp))
+
+                    // 3 puntos (opciones)
+                    Box {
+                        IconButton(onClick = { menuOpcionesAbierto = true }) {
+                            Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
+                        }
+                        DropdownMenu(
+                            expanded = menuOpcionesAbierto,
+                            onDismissRequest = { menuOpcionesAbierto = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Categorías de gastos") },
+                                onClick = {
+                                    menuOpcionesAbierto = false
+                                    onVerCategorias()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Configuración") },
+                                onClick = {
+                                    menuOpcionesAbierto = false
+                                    onAbrirConfiguracion()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Moneda") },
+                                onClick = {
+                                    menuOpcionesAbierto = false
+                                    onCambiarMoneda()
+                                }
+                            )
+                        }
                     }
                 }
             )
         }
     ) { inner ->
-        Column(
+        // Layout central + botón "Atrás" abajo-izquierda
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner)
-                .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 24.dp)
         ) {
-            Spacer(Modifier.height(24.dp))
-
-            // Mes en curso (si tienes un método en el VM que lo devuelva, úsalo)
-            Text(
-                text = vm.nombreMesActual(),
-                style = MaterialTheme.typography.headlineSmall
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            Text(text = "Ingresos: ${formatter.format(ingresos)}")
-            Spacer(Modifier.height(8.dp))
-            Text(text = "Gastos: ${formatter.format(gastos)}")
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Resumen: ${formatter.format(ingresos - gastos)}",
-                color = if ((ingresos - gastos) >= 0) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.error
-            )
-
-            Spacer(Modifier.height(24.dp))
-
-            Button(onClick = onIrHistorial) {
-                Text("Ver historial")
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+            // Contenido CENTRADO
+            Column(
+                modifier = Modifier.align(Alignment.Center),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                OutlinedButton(onClick = onIrAddGasto) { Text("Añadir gasto") }
-                OutlinedButton(onClick = onIrAddIngreso) { Text("Añadir ingreso") }
+                // Fecha / etiqueta del periodo
+                Text(
+                    text = vm.etiquetaPeriodo.ifBlank { vm.nombreMesActual() },
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                Text(text = "Ingresos: ${formatter.format(ingresos)}")
+                Spacer(Modifier.height(8.dp))
+                Text(text = "Gastos: ${formatter.format(gastos)}")
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Resumen: ${formatter.format(ingresos - gastos)}",
+                    color = if ((ingresos - gastos) >= 0)
+                        MaterialTheme.colorScheme.primary
+                    else
+                        MaterialTheme.colorScheme.error
+                )
+
+                Spacer(Modifier.height(24.dp))
+
+                Button(onClick = onIrHistorial) { Text("Ver historial") }
+
+                Spacer(Modifier.height(24.dp))
+
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(onClick = onIrAddGasto) { Text("Añadir gasto") }
+                    OutlinedButton(onClick = onIrAddIngreso) { Text("Añadir ingreso") }
+                }
             }
 
-            Spacer(Modifier.weight(1f))
-
-            // Botón Atrás (a ConfigFamilia)
+            // Botón "Atrás" pegado abajo a la izquierda
             OutlinedButton(
                 onClick = onBackToConfig,
-                modifier = Modifier.align(Alignment.Start)
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(bottom = 16.dp)
             ) {
                 Text("Atrás")
             }
-
-            Spacer(Modifier.height(16.dp))
         }
     }
 }
+
+
+
 
 
 

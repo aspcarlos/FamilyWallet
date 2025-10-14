@@ -8,8 +8,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.familywallet.datos.modelos.Movimiento
 import com.example.familywallet.datos.repositorios.MovimientoRepositorio
+import com.example.familywallet.presentacion.ui.FiltroPeriodo
+import com.example.familywallet.presentacion.ui.RangoFecha
+import com.example.familywallet.presentacion.ui.rangoPorFiltro
 import kotlinx.coroutines.launch
 import java.util.Calendar
+import java.util.Locale
 
 class MovimientosViewModel(
     private val repo: MovimientoRepositorio
@@ -26,6 +30,39 @@ class MovimientosViewModel(
         private set
     var totalGastos by mutableStateOf(0.0)
         private set
+
+    // --- Filtro/etiqueta visibles en la UI ---
+    var filtroPeriodo by mutableStateOf(FiltroPeriodo.MES)
+        private set
+
+    var etiquetaPeriodo by mutableStateOf("")   // se muestra en el título
+
+    // Cargar por rango (si tu repo no tiene entre-fechas,
+    // filtra localmente como fallback)
+    fun cargarRango(familiaId: String, inicio: Long, fin: Long) {
+        viewModelScope.launch {
+            val lista = try {
+                repo.movimientosEntre(familiaId, inicio, fin)
+            } catch (_: Throwable) {
+                // Fallback: carga "grande" y filtra por millis
+                val cal = Calendar.getInstance()
+                cal.timeInMillis = inicio
+                val yIni = cal.get(Calendar.YEAR)
+                val mIni = cal.get(Calendar.MONTH) + 1
+                repo.movimientosDeMes(familiaId, yIni, mIni)
+                    .filter { it.fechaMillis in inicio..fin }
+            }
+
+            _itemsDelMesState.value = lista
+            recomputarTotales()
+        }
+    }
+
+    fun aplicarRango(familiaId: String, rango: RangoFecha) {
+        etiquetaPeriodo = rango.etiqueta
+        cargarRango(familiaId, rango.inicio, rango.fin)
+    }
+
 
     // Mes/año que está viendo el usuario (para recargar tras insertar)
     private var yearActual: Int = 0

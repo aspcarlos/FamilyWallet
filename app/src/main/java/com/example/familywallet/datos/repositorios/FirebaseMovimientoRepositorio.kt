@@ -60,6 +60,22 @@ class FirebaseMovimientoRepositorio(private val db: FirebaseFirestore) : Movimie
     override suspend fun eliminarMovimiento(familiaId: String, id: String) {
         movimientosCol.document(id).delete().await()
     }
+
+    override suspend fun movimientosEntre(
+        familiaId: String,
+        inicioMillis: Long,
+        finMillis: Long
+    ): List<Movimiento> {
+        return db.collection("movimientos")
+            .whereEqualTo("familiaId", familiaId)
+            .whereGreaterThanOrEqualTo("fechaMillis", inicioMillis)
+            .whereLessThanOrEqualTo("fechaMillis", finMillis)
+            .get()
+            .await()
+            .documents
+            .mapNotNull { it.toObject(Movimiento::class.java) }
+    }
+
 }
 
 
