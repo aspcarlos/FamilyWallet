@@ -1,40 +1,37 @@
 package com.example.familywallet.presentacion.movimientos
 
-import androidx.compose.runtime.*
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.familywallet.datos.modelos.Movimiento
 import com.example.familywallet.datos.repositorios.MovimientoRepositorio
 import kotlinx.coroutines.launch
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Locale
 
 class MovimientosViewModel(
     private val repo: MovimientoRepositorio
 ) : ViewModel() {
 
-    // ------------------------------
-    // Estado
-    // ------------------------------
+    // Lista reactiva del mes
     private val _itemsDelMesState = mutableStateOf<List<Movimiento>>(emptyList())
     val itemsDelMesState: State<List<Movimiento>> get() = _itemsDelMesState
 
+    // Totales y moneda actual
     var monedaActual by mutableStateOf("EUR")
         private set
-
     var totalIngresos by mutableStateOf(0.0)
         private set
     var totalGastos by mutableStateOf(0.0)
         private set
 
-    // Mes/año cargados (para recargar tras insertar)
+    // Mes/año que está viendo el usuario (para recargar tras insertar)
     private var yearActual: Int = 0
     private var monthActual: Int = 0
 
-    // ------------------------------
-    // Moneda (tasas de ejemplo)
-    // ------------------------------
+    // Tasas simples (offline) para conversión
     private val conversionRates = mapOf(
         "EUR" to 1.0,
         "USD" to 1.08,
@@ -43,62 +40,40 @@ class MovimientosViewModel(
         "MXN" to 19.5
     )
 
-    fun cambiarMoneda(nueva: String) {
-        val tasaNueva = conversionRates[nueva] ?: 1.0
-        val tasaVieja = conversionRates[monedaActual] ?: 1.0
-        val factor = tasaNueva / tasaVieja
-
-        // Convertir todas las cantidades del mes actual
-        val convertida = _itemsDelMesState.value.map { mov ->
-            mov.copy(cantidad = mov.cantidad * factor)
-        }
-        _itemsDelMesState.value = convertida
-
-        monedaActual = nueva
+    // ---------------------------------------
+    // Helpers de estado
+    // ---------------------------------------
+    private fun setItems(nuevos: List<Movimiento>) {
+        _itemsDelMesState.value = nuevos
         recomputarTotales()
     }
 
-    // ------------------------------
-    // Totales
-    // ------------------------------
     private fun recomputarTotales() {
         val lista = _itemsDelMesState.value
-
-        totalIngresos = lista
-            .filter { it.tipo == Movimiento.Tipo.INGRESO }
-            .sumOf { it.cantidad }
-
-        totalGastos = lista
-            .filter { it.tipo == Movimiento.Tipo.GASTO }
-            .sumOf { it.cantidad }
+        totalIngresos = lista.filter { it.tipo == Movimiento.Tipo.INGRESO }.sumOf { it.cantidad }
+        totalGastos   = lista.filter { it.tipo == Movimiento.Tipo.GASTO   }.sumOf { it.cantidad }
     }
 
-    // ------------------------------
+    // ---------------------------------------
     // Cargas
-    // ------------------------------
+    // ---------------------------------------
     fun cargarMesActual(familiaId: String) {
         val cal = Calendar.getInstance()
-        cargarMes(
-            familiaId = familiaId,
-            year = cal.get(Calendar.YEAR),
-            month = cal.get(Calendar.MONTH) + 1
-        )
+        cargarMes(familiaId, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1)
     }
 
     fun cargarMes(familiaId: String, year: Int, month: Int) {
         yearActual = year
         monthActual = month
-
         viewModelScope.launch {
             val lista = repo.movimientosDeMes(familiaId, year, month)
-            _itemsDelMesState.value = lista
-            recomputarTotales()
+            setItems(lista) // asignación única + recálculo de totales
         }
     }
 
-    // ------------------------------
+    // ---------------------------------------
     // Inserciones
-    // ------------------------------
+    // ---------------------------------------
     fun agregarGasto(
         familiaId: String,
         cantidad: Double,
@@ -106,15 +81,16 @@ class MovimientosViewModel(
         fechaMillis: Long
     ) {
         viewModelScope.launch {
-            val mov = Movimiento(
-                id = "", // lo rellenará el repo si aplica
-                familiaId = familiaId,
-                cantidad = cantidad,
-                categoria = categoria,
-                fechaMillis = fechaMillis,
-                tipo = Movimiento.Tipo.GASTO
+            repo.agregarMovimiento(
+                Movimiento(
+                    id = "",
+                    familiaId = familiaId,
+                    cantidad = cantidad,
+                    categoria = categoria,
+                    fechaMillis = fechaMillis,
+                    tipo = Movimiento.Tipo.GASTO
+                )
             )
-            repo.agregarMovimiento(mov)
             cargarMes(familiaId, yearActualOrNow(), monthActualOrNow())
         }
     }
@@ -126,22 +102,45 @@ class MovimientosViewModel(
         fechaMillis: Long
     ) {
         viewModelScope.launch {
-            val mov = Movimiento(
-                id = "",
-                familiaId = familiaId,
-                cantidad = cantidad,
-                categoria = categoria,
-                fechaMillis = fechaMillis,
-                tipo = Movimiento.Tipo.INGRESO
+            repo.agregarMovimiento(
+                Movimiento(
+                    id = "",
+                    familiaId = familiaId,
+                    cantidad = cantidad,
+                    categoria = categoria,
+                    fechaMillis = fechaMillis,
+                    tipo = Movimiento.Tipo.INGRESO
+                )
             )
-            repo.agregarMovimiento(mov)
             cargarMes(familiaId, yearActualOrNow(), monthActualOrNow())
         }
     }
 
-    // ------------------------------
-    // Utilidades UI
-    // ------------------------------
+    // ---------------------------------------
+    // Moneda
+    // ---------------------------------------
+    fun cambiarMoneda(nueva: String) {
+        if (nueva == monedaActual) return
+        val tasaNueva = conversionRates[nueva] ?: 1.0
+        val tasaVieja = conversionRates[monedaActual] ?: 1.0
+        val factor = tasaNueva / tasaVieja
+
+        // Convertimos las cantidades en la lista actual
+        setItems(_itemsDelMesState.value.map { it.copy(cantidad = it.cantidad * factor) })
+
+        monedaActual = nueva
+        // (recomputarTotales() ya se llama dentro de setItems)
+    }
+
+    // ---------------------------------------
+    // Utilidades internas
+    // ---------------------------------------
+    private fun yearActualOrNow(): Int =
+        if (yearActual == 0) Calendar.getInstance().get(Calendar.YEAR) else yearActual
+
+    private fun monthActualOrNow(): Int =
+        if (monthActual == 0) Calendar.getInstance().get(Calendar.MONTH) + 1 else monthActual
+
     fun nombreMesActual(): String {
         val y = yearActualOrNow()
         val m = monthActualOrNow() // 1..12
@@ -150,17 +149,13 @@ class MovimientosViewModel(
             set(Calendar.MONTH, m - 1)
             set(Calendar.DAY_OF_MONTH, 1)
         }
-        val fmt = SimpleDateFormat("LLLL yyyy", Locale("es", "ES"))
+        val fmt = java.text.SimpleDateFormat("LLLL yyyy", java.util.Locale("es", "ES"))
         return fmt.format(cal.time)
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es", "ES")) else it.toString() }
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale("es", "ES")) else it.toString() }
     }
 
-    private fun yearActualOrNow(): Int =
-        if (yearActual == 0) Calendar.getInstance().get(Calendar.YEAR) else yearActual
-
-    private fun monthActualOrNow(): Int =
-        if (monthActual == 0) Calendar.getInstance().get(Calendar.MONTH) + 1 else monthActual
 }
+
 
 
 

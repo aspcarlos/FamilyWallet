@@ -9,7 +9,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
-import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
+import java.text.NumberFormat
+import java.util.*
+
+@Composable
+private fun rememberCurrencyFormatter(currencyCode: String): NumberFormat {
+    return remember(currencyCode) {
+        NumberFormat.getCurrencyInstance().apply {
+            currency = Currency.getInstance(currencyCode)
+        }
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,43 +31,38 @@ fun PantallaInicio(
     onIrHistorial: () -> Unit,
     onBackToConfig: () -> Unit,
     onAbrirConfiguracion: () -> Unit,
+    onCambiarMoneda: () -> Unit = {},
     onVerCategorias: () -> Unit,
-    onCambiarMoneda: () -> Unit,        // <- NUEVO
     appName: String = "FamilyWallet"
 ) {
-    // ← formateador se “engancha” a la moneda actual del VM
+    // 1) Cargar datos al entrar / cambiar familia
+    LaunchedEffect(familiaId) {
+        vm.cargarMesActual(familiaId)
+    }
+
+    // 2) Estado y formateador
+    val items by vm.itemsDelMesState
+    val ingresos = vm.totalIngresos
+    val gastos   = vm.totalGastos
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
 
-    // Si totalIngresos/totalGastos son State<Double> en el VM, léelos con 'by'
-    val totalIngresos by remember { vm::totalIngresos }.let { derivedStateOf { it.get() } }
-    val totalGastos   by remember { vm::totalGastos   }.let { derivedStateOf { it.get() } }
-
+    // 3) Menú del AppBar
     var menuAbierto by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(appName) },
+                title = { Text("FamilyWallet") },
                 actions = {
                     IconButton(onClick = { menuAbierto = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Menu")
+                        Icon(Icons.Default.MoreVert, contentDescription = null)
                     }
-                    DropdownMenu(
-                        expanded = menuAbierto,
-                        onDismissRequest = { menuAbierto = false }
-                    ) {
+                    DropdownMenu(expanded = menuAbierto, onDismissRequest = { menuAbierto = false }) {
                         DropdownMenuItem(
                             text = { Text("Categorías de gastos") },
                             onClick = {
                                 menuAbierto = false
                                 onVerCategorias()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Moneda") },               // <- NUEVA OPCIÓN
-                            onClick = {
-                                menuAbierto = false
-                                onCambiarMoneda()
                             }
                         )
                         DropdownMenuItem(
@@ -67,19 +72,16 @@ fun PantallaInicio(
                                 onAbrirConfiguracion()
                             }
                         )
+                        DropdownMenuItem(
+                            text = { Text("Moneda") },
+                            onClick = {
+                                menuAbierto = false
+                                onCambiarMoneda()    // <-- aquí lo usamos
+                            }
+                        )
                     }
                 }
             )
-        },
-        bottomBar = {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                OutlinedButton(onClick = onBackToConfig) { Text("Atrás") }
-            }
         }
     ) { inner ->
         Column(
@@ -87,33 +89,59 @@ fun PantallaInicio(
                 .fillMaxSize()
                 .padding(inner)
                 .padding(horizontal = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Mes actual ya lo tienes calculado en tu UI
-            Text("Octubre 2025", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(24.dp))
 
-            Text("Ingresos: ${formatter.format(totalIngresos)}")
-            Text("Gastos:   ${formatter.format(totalGastos)}")
-
-            val resumen = totalIngresos - totalGastos
+            // Mes en curso (si tienes un método en el VM que lo devuelva, úsalo)
             Text(
-                "Resumen: ${formatter.format(resumen)}",
-                color = if (resumen >= 0.0) MaterialTheme.colorScheme.primary
+                text = vm.nombreMesActual(),
+                style = MaterialTheme.typography.headlineSmall
+            )
+
+            Spacer(Modifier.height(24.dp))
+
+            Text(text = "Ingresos: ${formatter.format(ingresos)}")
+            Spacer(Modifier.height(8.dp))
+            Text(text = "Gastos: ${formatter.format(gastos)}")
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Resumen: ${formatter.format(ingresos - gastos)}",
+                color = if ((ingresos - gastos) >= 0) MaterialTheme.colorScheme.primary
                 else MaterialTheme.colorScheme.error
             )
 
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = onIrHistorial) { Text("Ver historial") }
+            Spacer(Modifier.height(24.dp))
 
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedButton(onClick = onIrAddGasto)   { Text("Añadir gasto") }
+            Button(onClick = onIrHistorial) {
+                Text("Ver historial")
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+            ) {
+                OutlinedButton(onClick = onIrAddGasto) { Text("Añadir gasto") }
                 OutlinedButton(onClick = onIrAddIngreso) { Text("Añadir ingreso") }
             }
+
+            Spacer(Modifier.weight(1f))
+
+            // Botón Atrás (a ConfigFamilia)
+            OutlinedButton(
+                onClick = onBackToConfig,
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Text("Atrás")
+            }
+
+            Spacer(Modifier.height(16.dp))
         }
     }
 }
+
 
 
 

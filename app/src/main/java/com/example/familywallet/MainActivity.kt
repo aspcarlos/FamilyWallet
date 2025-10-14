@@ -207,7 +207,7 @@ fun AppNav(
 
         // 🏠 Inicio
         composable(
-            route = Ruta.Inicio.route, // ✅ ya incluye {familiaId}
+            route = Ruta.Inicio.route,
             arguments = listOf(navArgument("familiaId"){ type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
@@ -220,16 +220,16 @@ fun AppNav(
                 onIrHistorial = { nav.navigate("historial/$familiaId") },
                 onBackToConfig = {
                     nav.navigate(Ruta.ConfigFamilia.route) {
-                        popUpTo(Ruta.Inicio.route + "/$familiaId") { inclusive = true }
+                        popUpTo(Ruta.Inicio.route) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
                 onAbrirConfiguracion = { nav.navigate(Ruta.Configuracion.route) },
                 onVerCategorias     = { nav.navigate(Ruta.Categorias.route) },
-                onCambiarMoneda     = { nav.navigate(Ruta.Moneda.route) } // <- ya no rompe
+                onCambiarMoneda     = { nav.navigate(Ruta.Moneda.route) } // <-- AQUÍ
             )
-
         }
+
 
         // ➕ Gasto
         composable(
