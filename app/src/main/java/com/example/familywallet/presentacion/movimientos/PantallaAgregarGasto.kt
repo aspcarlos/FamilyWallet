@@ -49,7 +49,7 @@ fun PantallaAgregarGasto(
         OutlinedTextField(
             value = cantidadText,
             onValueChange = { cantidadText = it },
-            label = { Text("Cantidad (€)") },
+            label = { Text("Cantidad") },
             modifier = Modifier.fillMaxWidth()
         )
 

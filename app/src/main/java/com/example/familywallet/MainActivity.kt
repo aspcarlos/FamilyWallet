@@ -284,7 +284,7 @@ fun AppNav(
             )
         }
 
-        // 📅 Historial del mes (detalle)
+        // 📅 Historial del mes
         composable(
             route = Ruta.HistorialMes.route,
             arguments = listOf(
