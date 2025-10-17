@@ -1,4 +1,3 @@
-// presentacion/familia/FamiliaViewModel.kt
 package com.example.familywallet.presentacion.familia
 
 import androidx.lifecycle.ViewModel

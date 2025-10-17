@@ -1,14 +1,18 @@
 package com.example.familywallet
 
-import PantallaCrearFamilia
+import PantallaConfiguracion
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
@@ -25,10 +29,10 @@ import com.example.familywallet.presentacion.autenticacion.PantallaRegistro
 import com.example.familywallet.presentacion.familia.FamiliaVMFactory
 import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import com.example.familywallet.presentacion.familia.PantallaConfigFamilia
+import com.example.familywallet.presentacion.familia.PantallaCrearFamilia
 import com.example.familywallet.presentacion.familia.PantallaUnirseFamilia
 
 import com.example.familywallet.presentacion.inicio.PantallaCategorias
-import com.example.familywallet.presentacion.inicio.PantallaConfiguracion
 import com.example.familywallet.presentacion.inicio.PantallaInicio
 import com.example.familywallet.presentacion.inicio.PantallaMoneda
 
@@ -38,6 +42,9 @@ import com.example.familywallet.presentacion.movimientos.PantallaAgregarGasto
 import com.example.familywallet.presentacion.movimientos.PantallaAgregarIngreso
 import com.example.familywallet.presentacion.movimientos.PantallaHistorial
 import com.example.familywallet.presentacion.movimientos.PantallaHistorialMes
+import com.example.familywallet.theme.ThemeVMFactory
+import com.example.familywallet.theme.ThemeViewModel
+import com.google.accompanist.systemuicontroller.rememberSystemUiController
 
 // ----------------------------
 // 📍 Rutas
@@ -67,18 +74,27 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // Estado del tema a nivel de app
-            var isDark by rememberSaveable { mutableStateOf(false) }
+            val themeVM: ThemeViewModel = viewModel(factory = ThemeVMFactory(application))
+            val isDark by themeVM.isDark.collectAsState()
 
-            MaterialTheme(colorScheme = if (isDark) darkColorScheme() else lightColorScheme()) {
-                AppNav(
-                    isDark = isDark,
-                    onToggleDark = { isDark = !isDark }
-                )
+            MaterialTheme(
+                colorScheme = if (isDark) darkColorScheme() else lightColorScheme()
+            ) {
+                // Esto pinta el fondo de TODA la app con el color del tema
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = MaterialTheme.colorScheme.background
+                ) {
+                    AppNav(
+                        isDark = isDark,
+                        onToggleDark = { themeVM.toggle() }
+                    )
+                }
             }
         }
     }
 }
+
 
 @Composable
 fun AppNav(
@@ -132,6 +148,7 @@ fun AppNav(
             PantallaConfigFamilia(
                 vm = familiaVM,
                 onIrALaFamilia = { familiaId ->
+                    movimientosVM.onFamiliaCambiada(familiaId)
                     nav.navigate("inicio/$familiaId") {
                         popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
                         launchSingleTop = true
@@ -158,6 +175,7 @@ fun AppNav(
             PantallaCrearFamilia(
                 vm = familiaVM,
                 onHecho = { familiaId ->
+                    movimientosVM.onFamiliaCambiada(familiaId)   // ← reset + carga
                     nav.navigate("inicio/$familiaId") {
                         popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
                         launchSingleTop = true
@@ -170,8 +188,10 @@ fun AppNav(
         composable(Ruta.UnirseFamilia.route) {
             PantallaUnirseFamilia(
                 onHecho = { familiaId ->
+                    movimientosVM.onFamiliaCambiada(familiaId)   // ← reset + carga
                     nav.navigate("inicio/$familiaId") {
                         popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
@@ -240,13 +260,7 @@ fun AppNav(
             PantallaAgregarGasto(
                 familiaId = familiaId,
                 vm = movimientosVM,
-                onGuardado = {
-                    nav.navigate("inicio/$familiaId") {
-                        popUpTo("inicio/$familiaId") { inclusive = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
+                onGuardado = { nav.popBackStack() } // vuelve a la misma PantallaInicio
             )
         }
 
@@ -259,13 +273,7 @@ fun AppNav(
             PantallaAgregarIngreso(
                 familiaId = familiaId,
                 vm = movimientosVM,
-                onGuardado = {
-                    nav.navigate("inicio/$familiaId") {
-                        popUpTo("inicio/$familiaId") { inclusive = true }
-                        launchSingleTop = true
-                        restoreState = true
-                    }
-                }
+                onGuardado = { nav.popBackStack() }
             )
         }
 

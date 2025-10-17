@@ -1,8 +1,8 @@
 package com.example.familywallet.presentacion.movimientos
 
 import androidx.compose.runtime.State
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,7 +10,6 @@ import com.example.familywallet.datos.modelos.Movimiento
 import com.example.familywallet.datos.repositorios.MovimientoRepositorio
 import com.example.familywallet.presentacion.ui.FiltroPeriodo
 import com.example.familywallet.presentacion.ui.RangoFecha
-import com.example.familywallet.presentacion.ui.rangoPorFiltro
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
@@ -19,67 +18,37 @@ class MovimientosViewModel(
     private val repo: MovimientoRepositorio
 ) : ViewModel() {
 
-    // Lista reactiva del mes
+    // Lista observable
     private val _itemsDelMesState = mutableStateOf<List<Movimiento>>(emptyList())
     val itemsDelMesState: State<List<Movimiento>> get() = _itemsDelMesState
 
-    // Totales y moneda actual
+    // Error observable
+    private val _errorMsg = mutableStateOf<String?>(null)
+    val errorMsg: State<String?> get() = _errorMsg
+
+    // 🔥 Estas deben ser State para que Compose se recom­ponga
     var monedaActual by mutableStateOf("EUR")
         private set
     var totalIngresos by mutableStateOf(0.0)
         private set
     var totalGastos by mutableStateOf(0.0)
         private set
-
-    // --- Filtro/etiqueta visibles en la UI ---
+    var etiquetaPeriodo by mutableStateOf("")
+        private set
     var filtroPeriodo by mutableStateOf(FiltroPeriodo.MES)
         private set
 
-    var etiquetaPeriodo by mutableStateOf("")   // se muestra en el título
-
-    // Cargar por rango (si tu repo no tiene entre-fechas,
-    // filtra localmente como fallback)
-    fun cargarRango(familiaId: String, inicio: Long, fin: Long) {
-        viewModelScope.launch {
-            val lista = try {
-                repo.movimientosEntre(familiaId, inicio, fin)
-            } catch (_: Throwable) {
-                // Fallback: carga "grande" y filtra por millis
-                val cal = Calendar.getInstance()
-                cal.timeInMillis = inicio
-                val yIni = cal.get(Calendar.YEAR)
-                val mIni = cal.get(Calendar.MONTH) + 1
-                repo.movimientosDeMes(familiaId, yIni, mIni)
-                    .filter { it.fechaMillis in inicio..fin }
-            }
-
-            _itemsDelMesState.value = lista
-            recomputarTotales()
-        }
-    }
-
-    fun aplicarRango(familiaId: String, rango: RangoFecha) {
-        etiquetaPeriodo = rango.etiqueta
-        cargarRango(familiaId, rango.inicio, rango.fin)
-    }
-
-
-    // Mes/año que está viendo el usuario (para recargar tras insertar)
+    // Para recargas
+    private var ultimoRango: RangoFecha? = null
     private var yearActual: Int = 0
     private var monthActual: Int = 0
 
-    // Tasas simples (offline) para conversión
+    // Conversión simple offline
     private val conversionRates = mapOf(
-        "EUR" to 1.0,
-        "USD" to 1.08,
-        "GBP" to 0.85,
-        "JPY" to 161.3,
-        "MXN" to 19.5
+        "EUR" to 1.0, "USD" to 1.08, "GBP" to 0.85, "JPY" to 161.3, "MXN" to 19.5
     )
 
-    // ---------------------------------------
-    // Helpers de estado
-    // ---------------------------------------
+    // ---- helpers ----
     private fun setItems(nuevos: List<Movimiento>) {
         _itemsDelMesState.value = nuevos
         recomputarTotales()
@@ -91,9 +60,7 @@ class MovimientosViewModel(
         totalGastos   = lista.filter { it.tipo == Movimiento.Tipo.GASTO   }.sumOf { it.cantidad }
     }
 
-    // ---------------------------------------
-    // Cargas
-    // ---------------------------------------
+    // ---- cargas ----
     fun cargarMesActual(familiaId: String) {
         val cal = Calendar.getInstance()
         cargarMes(familiaId, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1)
@@ -103,95 +70,131 @@ class MovimientosViewModel(
         yearActual = year
         monthActual = month
         viewModelScope.launch {
-            val lista = repo.movimientosDeMes(familiaId, year, month)
-            setItems(lista) // asignación única + recálculo de totales
+            try {
+                val lista = repo.movimientosDeMes(familiaId, year, month)
+                setItems(lista)
+                _errorMsg.value = null
+            } catch (e: Exception) {
+                _itemsDelMesState.value = emptyList()
+                _errorMsg.value = e.localizedMessage ?: "No se pudo cargar el mes."
+            }
         }
     }
 
-    // ---------------------------------------
-    // Inserciones
-    // ---------------------------------------
-    fun agregarGasto(
+    fun cargarRango(familiaId: String, inicio: Long, fin: Long) {
+        viewModelScope.launch {
+            try {
+                val lista = repo.movimientosEntre(familiaId, inicio, fin)
+                setItems(lista)
+                _errorMsg.value = null
+            } catch (e: Exception) {
+                _itemsDelMesState.value = emptyList()
+                _errorMsg.value = e.localizedMessage ?: "No se pudo cargar el rango."
+            }
+        }
+    }
+
+    fun aplicarRango(familiaId: String, rango: RangoFecha) {
+        etiquetaPeriodo = rango.etiqueta
+        ultimoRango = rango
+        cargarRango(familiaId, rango.inicio, rango.fin)
+    }
+
+    // ---- inserciones (suspend para poder esperar desde la UI) ----
+    suspend fun agregarGasto(
         familiaId: String,
         cantidad: Double,
         categoria: String?,
         fechaMillis: Long
     ) {
-        viewModelScope.launch {
-            repo.agregarMovimiento(
-                Movimiento(
-                    id = "",
-                    familiaId = familiaId,
-                    cantidad = cantidad,
-                    categoria = categoria,
-                    fechaMillis = fechaMillis,
-                    tipo = Movimiento.Tipo.GASTO
-                )
+        repo.agregarMovimiento(
+            Movimiento(
+                id = "",
+                familiaId = familiaId,
+                cantidad = cantidad,
+                categoria = categoria,
+                fechaMillis = fechaMillis,
+                tipo = Movimiento.Tipo.GASTO
             )
-            cargarMes(familiaId, yearActualOrNow(), monthActualOrNow())
-        }
+        )
+        recargarDespuesDeInsert(familiaId)
     }
 
-    fun agregarIngreso(
+    suspend fun agregarIngreso(
         familiaId: String,
         cantidad: Double,
         categoria: String?,
         fechaMillis: Long
     ) {
-        viewModelScope.launch {
-            repo.agregarMovimiento(
-                Movimiento(
-                    id = "",
-                    familiaId = familiaId,
-                    cantidad = cantidad,
-                    categoria = categoria,
-                    fechaMillis = fechaMillis,
-                    tipo = Movimiento.Tipo.INGRESO
-                )
+        repo.agregarMovimiento(
+            Movimiento(
+                id = "",
+                familiaId = familiaId,
+                cantidad = cantidad,
+                categoria = categoria,
+                fechaMillis = fechaMillis,
+                tipo = Movimiento.Tipo.INGRESO
             )
+        )
+        recargarDespuesDeInsert(familiaId)
+    }
+
+    private fun recargarDespuesDeInsert(familiaId: String) {
+        val r = ultimoRango
+        if (r != null) {
+            cargarRango(familiaId, r.inicio, r.fin)
+        } else {
             cargarMes(familiaId, yearActualOrNow(), monthActualOrNow())
         }
     }
 
-    // ---------------------------------------
-    // Moneda
-    // ---------------------------------------
+    // ---- moneda ----
     fun cambiarMoneda(nueva: String) {
         if (nueva == monedaActual) return
-        val tasaNueva = conversionRates[nueva] ?: 1.0
-        val tasaVieja = conversionRates[monedaActual] ?: 1.0
-        val factor = tasaNueva / tasaVieja
-
-        // Convertimos las cantidades en la lista actual
+        val factor = (conversionRates[nueva] ?: 1.0) / (conversionRates[monedaActual] ?: 1.0)
         setItems(_itemsDelMesState.value.map { it.copy(cantidad = it.cantidad * factor) })
-
         monedaActual = nueva
-        // (recomputarTotales() ya se llama dentro de setItems)
     }
 
-    // ---------------------------------------
-    // Utilidades internas
-    // ---------------------------------------
+    // ---- soporte a cambio de familia ----
+    fun onFamiliaCambiada(familiaId: String) {
+        resetEstado()
+        cargarMesActual(familiaId)
+    }
+
+    private fun resetEstado() {
+        _itemsDelMesState.value = emptyList()
+        totalIngresos = 0.0
+        totalGastos = 0.0
+        filtroPeriodo = FiltroPeriodo.MES
+        etiquetaPeriodo = ""
+        ultimoRango = null
+        yearActual = 0
+        monthActual = 0
+        _errorMsg.value = null
+    }
+
+    // ---- util ----
     private fun yearActualOrNow(): Int =
         if (yearActual == 0) Calendar.getInstance().get(Calendar.YEAR) else yearActual
-
     private fun monthActualOrNow(): Int =
         if (monthActual == 0) Calendar.getInstance().get(Calendar.MONTH) + 1 else monthActual
 
     fun nombreMesActual(): String {
         val y = yearActualOrNow()
-        val m = monthActualOrNow() // 1..12
+        val m = monthActualOrNow()
         val cal = Calendar.getInstance().apply {
-            set(Calendar.YEAR, y)
-            set(Calendar.MONTH, m - 1)
-            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.YEAR, y); set(Calendar.MONTH, m - 1); set(Calendar.DAY_OF_MONTH, 1)
         }
-        val fmt = java.text.SimpleDateFormat("LLLL yyyy", java.util.Locale("es", "ES"))
+        val fmt = java.text.SimpleDateFormat("LLLL yyyy", Locale("es", "ES"))
         return fmt.format(cal.time)
-            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(java.util.Locale("es", "ES")) else it.toString() }
+            .replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("es","ES")) else it.toString() }
     }
-
 }
+
+
+
+
 
 
 

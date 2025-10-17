@@ -68,7 +68,7 @@ fun PantallaConfigFamilia(
             } else {
                 FilledTonalButton(
                     onClick = { miFamiliaId?.let(onIrALaFamilia) },
-                    enabled = miFamiliaId != null && !cargando,
+                    enabled = !cargando,
                     modifier = Modifier.fillMaxWidth(0.8f)
                 ) {
                     Text("Ir a mi familia")

@@ -59,21 +59,21 @@ fun PantallaAgregarIngreso(
                         error = null
                         val fecha = System.currentTimeMillis()
                         scope.launch {
+                            // 👇 espera a que termine de guardar y recargar
                             vm.agregarIngreso(
                                 familiaId = familiaId,
                                 cantidad = cantidad,
                                 categoria = if (nota.isBlank()) null else nota,
                                 fechaMillis = fecha
                             )
-                            onGuardado()
+                            onGuardado() // vuelve después de recargar
                         }
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Guardar ingreso")
-        }
+        ) { Text("Guardar ingreso") }
+
     }
 }
 

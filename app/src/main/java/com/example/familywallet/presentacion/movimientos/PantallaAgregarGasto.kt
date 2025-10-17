@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.familywallet.datos.modelos.CATEGORIAS_GASTO
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -31,10 +32,7 @@ fun PantallaAgregarGasto(
     var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    val categorias = listOf(
-        "comida","supermercado","transporte","casa","entretenimiento",
-        "regalos","restaurante","salud","mascotas","ropa","taxi","otros"
-    )
+    val categorias = CATEGORIAS_GASTO
 
     Column(
         modifier = Modifier
@@ -92,21 +90,21 @@ fun PantallaAgregarGasto(
                         error = null
                         val fecha = System.currentTimeMillis()
                         scope.launch {
+                            // 👇 ahora espera a que termine de guardar y recargar
                             vm.agregarGasto(
                                 familiaId = familiaId,
                                 cantidad = cantidad,
                                 categoria = categoria!!,
                                 fechaMillis = fecha
                             )
-                            onGuardado()
+                            onGuardado() // aquí ya se habrá recargado el periodo
                         }
                     }
                 }
             },
             modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Guardar gasto")
-        }
+        ) { Text("Guardar gasto") }
+
     }
 }
 

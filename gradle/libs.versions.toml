@@ -1,5 +1,8 @@
 [versions]
+accompanistSystemuicontroller = "0.36.0"
 agp = "8.12.3"
+datastorePreferences = "1.1.7"
+datastorePreferencesVersion = "1.1.1"
 firebaseBomVersion = "33.2.0"
 googleFirebaseBom = "33.4.0"
 kotlin = "2.2.20"
@@ -24,10 +27,14 @@ foundation = "1.9.2"
 runtimeSaveable = "1.9.3"
 foundationLayout = "1.9.3"
 runtime = "1.9.3"
-roomKtx = "2.8.2"   # estable
+roomKtx = "2.8.2"
+material3Version = "1.4.0"   # estable
 
 [libraries]
+accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferences" }
+androidx-datastore-preferences-v111 = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePreferencesVersion" }
 androidx-lifecycle-runtime-ktx = { group = "androidx.lifecycle", name = "lifecycle-runtime-ktx", version.ref = "lifecycleRuntimeKtx" }
 androidx-lifecycle-viewmodel-ktx = { module = "androidx.lifecycle:lifecycle-viewmodel-ktx", version.ref = "lifecycleViewmodelKtx" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycleViewmodelKtx" }
@@ -67,6 +74,7 @@ androidx-runtime-saveable = { group = "androidx.compose.runtime", name = "runtim
 androidx-foundation-layout = { group = "androidx.compose.foundation", name = "foundation-layout", version.ref = "foundationLayout" }
 androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
+material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3Version" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

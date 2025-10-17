@@ -72,9 +72,9 @@ fun PantallaInicio(
 ) {
     LaunchedEffect(familiaId) { vm.cargarMesActual(familiaId) }
 
+    val formatter = rememberCurrencyFormatter(vm.monedaActual) // monedaActual ahora es State
     val ingresos = vm.totalIngresos
     val gastos   = vm.totalGastos
-    val formatter = rememberCurrencyFormatter(vm.monedaActual)
 
     val locale = Locale("es", "ES")
     var menuPeriodoAbierto  by remember { mutableStateOf(false) }

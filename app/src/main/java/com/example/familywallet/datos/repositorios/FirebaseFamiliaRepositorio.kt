@@ -1,15 +1,14 @@
 package com.example.familywallet.datos.repositorios
 
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
 import kotlinx.coroutines.tasks.await
 
 class FirebaseFamiliaRepositorio(
     private val db: FirebaseFirestore
 ) : FamiliaRepositorio {
 
-    private val familias = db.collection("familias")
-    private val miembros = db.collection("miembros")
+    private val familias   = db.collection("familias")
+    private val miembros   = db.collection("miembros")
     private val movimientos = db.collection("movimientos")
 
     override suspend fun miFamiliaId(ownerUid: String): String? {
@@ -19,21 +18,22 @@ class FirebaseFamiliaRepositorio(
 
     override suspend fun crearFamilia(nombre: String, ownerUid: String, aliasOwner: String): String {
         val ref = familias.document()
-        val data = mapOf(
-            "nombre" to nombre,
-            "ownerUid" to ownerUid,
-            "createdAt" to System.currentTimeMillis()
-        )
-        ref.set(data).await()
+        ref.set(
+            mapOf(
+                "nombre" to nombre,
+                "ownerUid" to ownerUid,
+                "createdAt" to System.currentTimeMillis()
+            )
+        ).await()
 
-        // (opcional) añadir miembro owner
+        // miembro ADMIN del owner
         miembros.document().set(
             mapOf(
-                "familiaID" to ref.id,
-                "uidID" to ownerUid,
-                "alias" to "admin",
-                "rol" to "admin",
-                "joinedAt" to System.currentTimeMillis()
+                "familiaId" to ref.id,
+                "uid"       to ownerUid,
+                "alias"     to aliasOwner,
+                "rol"       to "ADMIN",
+                "joinedAt"  to System.currentTimeMillis()
             )
         ).await()
 
@@ -41,13 +41,8 @@ class FirebaseFamiliaRepositorio(
     }
 
     override suspend fun eliminarFamilia(familiaId: String) {
-        // 1) borrar todos los movimientos con familiaID == familiaId
-        deleteByFieldPaged(movimientos, "familiaID", familiaId)
-
-        // 2) borrar todos los miembros con familiaID == familiaId
-        deleteByFieldPaged(miembros, "familiaID", familiaId)
-
-        // 3) borrar documento familia
+        deleteByFieldPaged(movimientos, "familiaId", familiaId)
+        deleteByFieldPaged(miembros,    "familiaId", familiaId)
         familias.document(familiaId).delete().await()
     }
 
@@ -58,11 +53,8 @@ class FirebaseFamiliaRepositorio(
         pageSize: Long = 200
     ) {
         while (true) {
-            val snap = col.whereEqualTo(field, value)
-                .limit(pageSize)
-                .get().await()
+            val snap = col.whereEqualTo(field, value).limit(pageSize).get().await()
             if (snap.isEmpty) break
-
             val batch = db.batch()
             snap.documents.forEach { batch.delete(it.reference) }
             batch.commit().await()
@@ -70,6 +62,8 @@ class FirebaseFamiliaRepositorio(
         }
     }
 }
+
+
 
 
 

@@ -34,6 +34,10 @@ fun PantallaHistorialMes(
     val items = vm.itemsDelMesState.value
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
 
+    LaunchedEffect(familiaId, year, month) {
+        vm.cargarMes(familiaId, year, month)
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(

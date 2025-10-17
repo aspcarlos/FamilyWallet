@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.androidx.foundation.layout)
     implementation(libs.androidx.runtime)
     implementation(libs.androidx.room.ktx)
+    implementation(libs.material3)
 
     // Tests
     testImplementation(libs.junit)
@@ -87,4 +88,9 @@ dependencies {
 
     // Icons
     implementation(libs.androidx.material.icons.extended)
+
+    // Theme
+    implementation(libs.androidx.datastore.preferences.v111)
+    implementation(libs.accompanist.systemuicontroller)
+
 }
