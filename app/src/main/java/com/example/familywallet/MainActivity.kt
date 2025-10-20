@@ -1,6 +1,5 @@
 package com.example.familywallet
 
-import PantallaConfiguracion
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -21,6 +20,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.familywallet.datos.repositorios.ServiceLocator
+import com.example.familywallet.presentacion.autenticacion.AuthViewModel
 
 import com.example.familywallet.presentacion.autenticacion.PantallaLogin
 import com.example.familywallet.presentacion.autenticacion.PantallaOlvidoPassword
@@ -33,6 +33,7 @@ import com.example.familywallet.presentacion.familia.PantallaCrearFamilia
 import com.example.familywallet.presentacion.familia.PantallaUnirseFamilia
 
 import com.example.familywallet.presentacion.inicio.PantallaCategorias
+import com.example.familywallet.presentacion.inicio.PantallaConfiguracion
 import com.example.familywallet.presentacion.inicio.PantallaInicio
 import com.example.familywallet.presentacion.inicio.PantallaMoneda
 
@@ -45,6 +46,8 @@ import com.example.familywallet.presentacion.movimientos.PantallaHistorialMes
 import com.example.familywallet.theme.ThemeVMFactory
 import com.example.familywallet.theme.ThemeViewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 
 // ----------------------------
 // 📍 Rutas
@@ -103,6 +106,10 @@ fun AppNav(
 ) {
     val nav = rememberNavController()
 
+    // Si hay usuario, empieza en ConfigFamilia; si no, en Login
+    val isLoggedIn = Firebase.auth.currentUser != null
+    val start = if (isLoggedIn) Ruta.ConfigFamilia.route else Ruta.Login.route
+
     // VM de movimientos
     val movimientosVM: MovimientosViewModel = viewModel(
         factory = MovimientosVMFactory(ServiceLocator.movimientosRepo)
@@ -116,16 +123,33 @@ fun AppNav(
         )
     )
 
+    val authVM: AuthViewModel = viewModel()
+
     NavHost(
         navController = nav,
         startDestination = Ruta.Login.route
     ) {
-        // 🔐 Auth
+        // 🔐 Login
         composable(Ruta.Login.route) {
+            // Si ya hay sesión, salta automáticamente a ConfigFamilia
+            LaunchedEffect(Unit) {
+                Firebase.auth.currentUser?.let {
+                    nav.navigate(Ruta.ConfigFamilia.route) {
+                        popUpTo(Ruta.Login.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+
             PantallaLogin(
-                onLoginOk = { nav.navigate(Ruta.ConfigFamilia.route) },
+                onLoginOk = {
+                    nav.navigate(Ruta.ConfigFamilia.route) {
+                        popUpTo(Ruta.Login.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
                 onRegistro = { nav.navigate(Ruta.Registro.route) },
-                onOlvido = { nav.navigate(Ruta.Recuperar.route) }
+                onOlvido   = { nav.navigate(Ruta.Recuperar.route) }
             )
         }
 
@@ -198,13 +222,22 @@ fun AppNav(
         }
 
         // ⚙️ Configuración (tema oscuro)
-        composable(Ruta.Configuracion.route) {
+        composable(route = Ruta.Configuracion.route) {
             PantallaConfiguracion(
                 isDark = isDark,
                 onToggleDark = onToggleDark,
-                onBack = { nav.popBackStack() }
+                onBack = { nav.popBackStack() },
+                onLogout = {
+                    authVM.logout()
+                    nav.navigate(Ruta.Login.route) {
+                        // Limpia todo el back stack para que no se pueda volver
+                        popUpTo(nav.graph.startDestinationId) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
             )
         }
+
 
         composable(route = Ruta.Moneda.route) {
             PantallaMoneda(

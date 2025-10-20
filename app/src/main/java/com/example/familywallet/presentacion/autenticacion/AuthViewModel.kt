@@ -72,6 +72,12 @@ class AuthViewModel : ViewModel() {
             onError(e.localizedMessage ?: "Error enviando correo de restablecimiento.")
         }
     }
+
+    // CERRAR SESION
+    fun logout() {
+        auth.signOut()
+    }
+
 }
 
 
