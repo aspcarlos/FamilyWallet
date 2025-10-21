@@ -1,11 +1,13 @@
 package com.example.familywallet.presentacion.autenticacion
 
+import android.content.Intent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -20,6 +22,8 @@ fun PantallaLogin(
     onRegistro: () -> Unit,
     onOlvido: () -> Unit
 ) {
+    val context = LocalContext.current
+
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var showPass by remember { mutableStateOf(false) }
@@ -29,6 +33,11 @@ fun PantallaLogin(
     val emailError = validarEmail(email)
     val passError  = if (pass.isBlank()) "La contraseña es obligatoria" else null
     val canSubmit  = emailError == null && passError == null && !loading
+
+    // Detecta error de verificación para mostrar CTA adicional
+    val requiereVerificacion = remember(error) {
+        error?.startsWith("Debes verificar tu correo") == true
+    }
 
     Box(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -73,7 +82,6 @@ fun PantallaLogin(
                 onClick = {
                     loading = true
                     error = null
-
                     vm.login(
                         email = email.trim(),
                         pass  = pass,
@@ -81,21 +89,42 @@ fun PantallaLogin(
                             loading = false
                             onLoginOk()
                         },
-                        onError = {
+                        onError = { msg ->
                             loading = false
-                            error = it
+                            error = msg
                         }
                     )
                 },
-                enabled = !loading,
+                enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(if (loading) "Entrando..." else "Entrar")
             }
 
-            // Mensaje de error general (correo no registrado, contraseña mala, etc.)
+            // Mensaje de error general
             error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
+            }
+
+            // CTA específico si falta verificación: abrir app de correo
+            if (requiereVerificacion) {
+                OutlinedButton(
+                    onClick = {
+                        // Abre la app de correo del dispositivo
+                        val intent = Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_APP_EMAIL)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        runCatching { context.startActivity(intent) }
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Abrir mi correo")
+                }
+                Text(
+                    "Revisa la bandeja de entrada y spam. Si no te llega, vuelve a intentar iniciar sesión para reenviar el enlace.",
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
 
             TextButton(onClick = onOlvido) { Text("¿Olvidaste tu contraseña?") }
@@ -103,4 +132,5 @@ fun PantallaLogin(
         }
     }
 }
+
 

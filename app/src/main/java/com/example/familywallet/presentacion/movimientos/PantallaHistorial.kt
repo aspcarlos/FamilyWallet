@@ -2,6 +2,7 @@ package com.example.familywallet.presentacion.movimientos
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -23,21 +24,20 @@ fun PantallaHistorial(
         topBar = {
             TopAppBar(
                 title = { Text("Historial $year") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) { Text("←") }
-                }
+                navigationIcon = { IconButton(onClick = onBack) { Text("←") } }
             )
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+                .padding(padding),
+            contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            (1..12).forEach { m ->
-                val nombreMes = c.apply { set(Calendar.MONTH, m - 1) }
+            items(12) { idx ->
+                val m = idx + 1
+                val nombreMes = Calendar.getInstance().apply { set(Calendar.MONTH, m - 1) }
                     .getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
                     ?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
                     ?: "Mes $m"
@@ -48,7 +48,9 @@ fun PantallaHistorial(
                         .clickable { onAbrirMes(year, m) }
                 ) {
                     Row(
-                        Modifier.fillMaxWidth().padding(16.dp),
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Text(nombreMes, style = MaterialTheme.typography.titleMedium)
@@ -59,6 +61,7 @@ fun PantallaHistorial(
         }
     }
 }
+
 
 
 

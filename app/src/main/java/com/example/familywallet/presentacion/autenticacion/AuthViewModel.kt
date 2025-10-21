@@ -14,7 +14,7 @@ class AuthViewModel : ViewModel() {
 
     private val auth = Firebase.auth
 
-    // REGISTRO DE USUARIO
+    /** REGISTRO + envío de verificación. Cierra sesión para obligar a verificar. */
     fun registrar(
         email: String,
         pass: String,
@@ -22,8 +22,14 @@ class AuthViewModel : ViewModel() {
         onError: (String) -> Unit
     ) = viewModelScope.launch {
         try {
-            // Crea el usuario en Firebase
             auth.createUserWithEmailAndPassword(email, pass).await()
+
+            // Enviar correo de verificación
+            auth.currentUser?.sendEmailVerification()?.await()
+
+            // Importante: cerrar sesión para que no entre sin verificar
+            auth.signOut()
+
             onOk()
         } catch (e: Exception) {
             val msg = when (e) {
@@ -39,7 +45,7 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // LOGIN DE USUARIO
+    /** LOGIN. Si no está verificado, reenvía verificación y bloquea acceso. */
     fun login(
         email: String,
         pass: String,
@@ -48,6 +54,16 @@ class AuthViewModel : ViewModel() {
     ) = viewModelScope.launch {
         try {
             auth.signInWithEmailAndPassword(email, pass).await()
+            val user = auth.currentUser
+
+            if (user != null && !user.isEmailVerified) {
+                // reenvía por si no lo recibió
+                user.sendEmailVerification().await()
+                auth.signOut()
+                onError("Debes verificar tu correo. Te hemos enviado un enlace.")
+                return@launch
+            }
+
             onOk()
         } catch (e: Exception) {
             val msg = when (e) {
@@ -59,7 +75,7 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // RESET PASSWORD
+    /** Reset password (igual que tenías) */
     fun enviarResetPassword(
         email: String,
         onOk: () -> Unit,
@@ -73,12 +89,11 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    // CERRAR SESION
     fun logout() {
         auth.signOut()
     }
-
 }
+
 
 
 

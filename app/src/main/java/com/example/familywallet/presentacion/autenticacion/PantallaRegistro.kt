@@ -126,6 +126,8 @@ fun PantallaRegistro(
                         onOk = {
                             cargando = false
                             generalError = null
+                            // Aviso: debe ir a su email
+                            // y lo devolvemos a Login (ya haces nav en Main)
                             onRegistrar(email.trim(), pass)
                         },
                         onError = { msg ->
@@ -137,6 +139,7 @@ fun PantallaRegistro(
                 enabled = !cargando,
                 modifier = Modifier.fillMaxWidth()
             ) { Text(if (cargando) "Creando..." else "Crear cuenta") }
+
 
             TextButton(onClick = onVolverLogin) { Text("Volver a iniciar sesión") }
         }
