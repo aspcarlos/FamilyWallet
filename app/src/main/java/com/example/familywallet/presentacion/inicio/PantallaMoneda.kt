@@ -2,7 +2,6 @@ package com.example.familywallet.presentacion.inicio
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -11,12 +10,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
+import com.example.familywallet.presentacion.ui.ScreenScaffold
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaMoneda(
     vm: MovimientosViewModel,
-    onGuardar: (String) -> Unit,   // <-- NUEVO
+    onGuardar: (String) -> Unit,
     onBack: () -> Unit
 ) {
     val opciones = listOf("EUR","USD","GBP","JPY","MXN")
@@ -24,7 +24,7 @@ fun PantallaMoneda(
     var menuAbierto by remember { mutableStateOf(false) }
     var seleccion by rememberSaveable { mutableStateOf(vm.monedaActual) }
 
-    Scaffold(
+    ScreenScaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Cambiar Moneda") },
@@ -67,7 +67,6 @@ fun PantallaMoneda(
 
             Spacer(Modifier.height(24.dp))
 
-            // Guardar cambios (llama al callback que pasas desde MainActivity)
             Button(
                 onClick = { onGuardar(seleccion) },
                 enabled = seleccion != vm.monedaActual
@@ -77,5 +76,6 @@ fun PantallaMoneda(
         }
     }
 }
+
 
 

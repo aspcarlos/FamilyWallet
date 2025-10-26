@@ -6,10 +6,19 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.example.familywallet.datos.modelos.Movimiento
+import com.example.familywallet.presentacion.ui.ScreenScaffold
 import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -38,7 +47,7 @@ fun PantallaHistorialMes(
         vm.cargarMes(familiaId, year, month)
     }
 
-    Scaffold(
+    ScreenScaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Detalle • $year/$month") },
@@ -69,6 +78,7 @@ fun PantallaHistorialMes(
         }
     }
 }
+
 
 
 

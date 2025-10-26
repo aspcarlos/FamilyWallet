@@ -7,6 +7,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.familywallet.presentacion.ui.ScreenScaffold
 import java.util.Calendar
 import java.util.Locale
 
@@ -20,7 +21,7 @@ fun PantallaHistorial(
     val c = Calendar.getInstance()
     val year = c.get(Calendar.YEAR)
 
-    Scaffold(
+    ScreenScaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Historial $year") },
@@ -61,6 +62,7 @@ fun PantallaHistorial(
         }
     }
 }
+
 
 
 

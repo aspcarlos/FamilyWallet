@@ -10,26 +10,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.familywallet.datos.repositorios.ServiceLocator
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
-import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
 import com.example.familywallet.presentacion.ui.rangoAnioActual
 import com.example.familywallet.presentacion.ui.rangoDiaActual
 import com.example.familywallet.presentacion.ui.rangoMesActual
 import com.example.familywallet.presentacion.ui.rangoSemanaActual
+import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
 import java.util.Locale
 
 @Composable
 private fun TriLinesIcon(modifier: Modifier = Modifier) {
-    // Leer colores del tema en el contexto @Composable
     val lineColor = MaterialTheme.colorScheme.onSurface
-
     Canvas(modifier = modifier.size(24.dp)) {
         val h = size.height
         val w = size.width
         val stroke = 3f
-
-        // 1ª línea (más larga)
+        // 1ª línea
         drawLine(
             color = lineColor,
             start = Offset(w * 0.25f, h * 0.30f),
@@ -45,7 +44,7 @@ private fun TriLinesIcon(modifier: Modifier = Modifier) {
             strokeWidth = stroke,
             cap = StrokeCap.Round
         )
-        // 3ª línea (más corta)
+        // 3ª línea
         drawLine(
             color = lineColor,
             start = Offset(w * 0.55f, h * 0.70f),
@@ -68,33 +67,45 @@ fun PantallaInicio(
     onAbrirConfiguracion: () -> Unit,
     onCambiarMoneda: () -> Unit = {},
     onVerCategorias: () -> Unit,
+    onIrSolicitudes: () -> Unit,
+    esAdmin: Boolean = false,
     appName: String = "FamilyWallet"
 ) {
+    // Cargar mes actual al entrar
     LaunchedEffect(familiaId) { vm.cargarMesActual(familiaId) }
 
-    val formatter = rememberCurrencyFormatter(vm.monedaActual) // monedaActual ahora es State
-    val ingresos = vm.totalIngresos
-    val gastos   = vm.totalGastos
+    // Nombre de la familia
+    var nombreFamilia by remember(familiaId) { mutableStateOf<String?>(null) }
+    LaunchedEffect(familiaId) {
+        nombreFamilia = try {
+            ServiceLocator.familiaRepo.nombreDe(familiaId)
+        } catch (_: Exception) {
+            null
+        }
+    }
 
-    val locale = Locale("es", "ES")
+    val ingresos  = vm.totalIngresos
+    val gastos    = vm.totalGastos
+    val formatter = rememberCurrencyFormatter(vm.monedaActual)
+    val locale    = Locale("es", "ES")
+
     var menuPeriodoAbierto  by remember { mutableStateOf(false) }
     var menuOpcionesAbierto by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
-            // Título vacío: la fecha ya no va aquí
             CenterAlignedTopAppBar(
                 navigationIcon = {
                     Text(
-                        text = appName,
+                        text  = appName,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(start = 16.dp)
                     )
                 },
-                title = {}, // <- vacío para que no aparezca texto centrado en el AppBar
+                title = {},
                 actions = {
-                    // 3 líneas (periodo)
+                    // Menú de periodo (icono 3 líneas)
                     Box {
                         IconButton(onClick = { menuPeriodoAbierto = true }) { TriLinesIcon() }
                         DropdownMenu(
@@ -145,32 +156,30 @@ fun PantallaInicio(
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Categorías de gastos") },
-                                onClick = {
-                                    menuOpcionesAbierto = false
-                                    onVerCategorias()
-                                }
+                                onClick = { menuOpcionesAbierto = false; onVerCategorias() }
                             )
                             DropdownMenuItem(
                                 text = { Text("Configuración") },
-                                onClick = {
-                                    menuOpcionesAbierto = false
-                                    onAbrirConfiguracion()
-                                }
+                                onClick = { menuOpcionesAbierto = false; onAbrirConfiguracion() }
                             )
                             DropdownMenuItem(
                                 text = { Text("Moneda") },
-                                onClick = {
-                                    menuOpcionesAbierto = false
-                                    onCambiarMoneda()
-                                }
+                                onClick = { menuOpcionesAbierto = false; onCambiarMoneda() }
                             )
+                            if (esAdmin) {
+                                Divider()
+                                DropdownMenuItem(
+                                    text = { Text("Solicitudes") },
+                                    onClick = { menuOpcionesAbierto = false; onIrSolicitudes() }
+                                )
+                            }
                         }
                     }
                 }
             )
         }
     ) { inner ->
-        // Layout central + botón "Atrás" abajo-izquierda
+        // Layout central + botón "Atrás"
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -182,10 +191,23 @@ fun PantallaInicio(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Nombre de la familia centrado
+                nombreFamilia?.let {
+                    Text(
+                        text = it,
+                        style = MaterialTheme.typography.headlineMedium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(Modifier.height(16.dp)) // separación con la fecha
+                }
+
                 // Fecha / etiqueta del periodo
                 Text(
                     text = vm.etiquetaPeriodo.ifBlank { vm.nombreMesActual() },
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -195,7 +217,7 @@ fun PantallaInicio(
                 Text(text = "Gastos: ${formatter.format(gastos)}")
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Resumen: ${formatter.format(ingresos - gastos)}",
+                    text  = "Resumen: ${formatter.format(ingresos - gastos)}",
                     color = if ((ingresos - gastos) >= 0)
                         MaterialTheme.colorScheme.primary
                     else
@@ -212,12 +234,12 @@ fun PantallaInicio(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(onClick = onIrAddGasto) { Text("Añadir gasto") }
+                    OutlinedButton(onClick = onIrAddGasto)   { Text("Añadir gasto") }
                     OutlinedButton(onClick = onIrAddIngreso) { Text("Añadir ingreso") }
                 }
             }
 
-            // Botón "Atrás" pegado abajo a la izquierda
+            // Botón "Atrás" abajo-izquierda
             OutlinedButton(
                 onClick = onBackToConfig,
                 modifier = Modifier
@@ -229,6 +251,10 @@ fun PantallaInicio(
         }
     }
 }
+
+
+
+
 
 
 

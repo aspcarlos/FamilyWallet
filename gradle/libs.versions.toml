@@ -28,7 +28,8 @@ runtimeSaveable = "1.9.3"
 foundationLayout = "1.9.3"
 runtime = "1.9.3"
 roomKtx = "2.8.2"
-material3Version = "1.4.0"   # estable
+material3Version = "1.4.0"
+foundationVersion = "1.9.3"   # estable
 
 [libraries]
 accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
@@ -75,6 +76,7 @@ androidx-foundation-layout = { group = "androidx.compose.foundation", name = "fo
 androidx-runtime = { group = "androidx.compose.runtime", name = "runtime", version.ref = "runtime" }
 androidx-room-ktx = { group = "androidx.room", name = "room-ktx", version.ref = "roomKtx" }
 material3 = { group = "androidx.compose.material3", name = "material3", version.ref = "material3Version" }
+foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

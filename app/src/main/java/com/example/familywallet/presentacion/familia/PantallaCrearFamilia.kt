@@ -1,28 +1,16 @@
 package com.example.familywallet.presentacion.familia
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaCrearFamilia(
     vm: FamiliaViewModel,
@@ -30,54 +18,96 @@ fun PantallaCrearFamilia(
     onAtras: () -> Unit
 ) {
     var nombreFamilia by remember { mutableStateOf("") }
-    var alias         by remember { mutableStateOf("") }
-    var error         by remember { mutableStateOf<String?>(null) }
+    var alias by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var cargando by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        OutlinedTextField(
-            value = nombreFamilia,
-            onValueChange = { nombreFamilia = it },
-            label = { Text("Nombre familia") },
-            modifier = Modifier.fillMaxWidth(0.85f)
-        )
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Crear familia") },
+                navigationIcon = {
+                    IconButton(onClick = onAtras) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = nombreFamilia,
+                    onValueChange = { nombreFamilia = it; error = null },
+                    label = { Text("Nombre familia") },
+                    singleLine = true,
+                    enabled = !cargando,
+                    modifier = Modifier.fillMaxWidth(0.85f)
+                )
 
-        Spacer(Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = alias,
+                    onValueChange = { alias = it; error = null },
+                    label = { Text("Tu alias") },
+                    singleLine = true,
+                    enabled = !cargando,
+                    modifier = Modifier.fillMaxWidth(0.85f)
+                )
 
-        OutlinedTextField(
-            value = alias,
-            onValueChange = { alias = it },
-            label = { Text("Tu alias") },
-            modifier = Modifier.fillMaxWidth(0.85f)
-        )
+                error?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error)
+                }
 
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
-        Spacer(Modifier.height(16.dp))
-
-        Button(
-            enabled = nombreFamilia.isNotBlank() && alias.isNotBlank(),
-            onClick = {
-                scope.launch {
-                    try {
-                        val id = vm.crearFamilia(nombreFamilia, alias)   // ← AQUÍ
-                        onHecho(id)
-                    } catch (e: Exception) {
-                        error = e.message ?: "Error al crear familia"
+                Button(
+                    enabled = !cargando && nombreFamilia.isNotBlank() && alias.isNotBlank(),
+                    onClick = {
+                        if (nombreFamilia.isBlank() || alias.isBlank()) {
+                            error = "Rellena nombre de familia y alias"
+                            return@Button
+                        }
+                        cargando = true
+                        scope.launch {
+                            try {
+                                val id = vm.crearFamilia(
+                                    nombre = nombreFamilia.trim(),
+                                    aliasOwner = alias.trim()
+                                )
+                                error = null
+                                onHecho(id)
+                            } catch (e: Exception) {
+                                error = e.message ?: "Error al crear familia"
+                            } finally {
+                                cargando = false
+                            }
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(0.85f)
+                ) {
+                    if (cargando) {
+                        CircularProgressIndicator(
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    } else {
+                        Text("Crear")
                     }
                 }
             }
-        ) { Text("Crear") }
-
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
     }
 }
+
 
 
 

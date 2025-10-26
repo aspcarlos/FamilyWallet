@@ -15,6 +15,10 @@ object FakeFamiliaRepositorio {
         familias.add(f)
         return f
     }
+
+    private val nombres = mutableMapOf<String, String>()
+    // ...
+    suspend fun nombreDe(familiaId: String): String? = nombres[familiaId]
 }
 
 

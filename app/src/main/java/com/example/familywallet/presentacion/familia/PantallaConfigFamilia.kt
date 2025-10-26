@@ -9,131 +9,150 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.collectAsState
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaConfigFamilia(
     vm: FamiliaViewModel,
     onIrALaFamilia: (String) -> Unit, // navegar a inicio con ese id
-    onIrLogin: () -> Unit,            // volver al login
     onCrear: () -> Unit,              // ir a crear familia
     onUnirse: () -> Unit,             // ir a unirse a familia
-    onAtras: () -> Unit               // botón “Atrás” abajo a la izquierda
+    onLogout: () -> Unit              // cierra sesión y navega a login
 ) {
     val scope = rememberCoroutineScope()
+
+    // Estados del VM
     val miFamiliaId by vm.miFamiliaId.collectAsState(initial = null)
     val cargando   by vm.cargando.collectAsState(initial = false)
 
     var mostrarConfirmacion by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    // Refresca al entrar
-    LaunchedEffect(Unit) { vm.refrescarMiFamilia() }
+    // IMPORTANTE: observación en tiempo real
+    // Así, si en otro dispositivo te aprueban la solicitud,
+    // aquí cambia automáticamente a "Ir a mi familia".
+    LaunchedEffect(Unit) {
+        vm.observarMiFamilia()
+    }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+    Scaffold { inner ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .padding(24.dp)
         ) {
-            Text(
-                text = "Configuración Familia",
-                style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center
-            )
+            // Contenido principal centrado
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "Configuración Familia",
+                    style = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center
+                )
 
-            // Estado: sin familia -> solo Crear / Unirse
-            if (miFamiliaId.isNullOrEmpty()) {
-                if (cargando) {
-                    CircularProgressIndicator()
+                if (miFamiliaId.isNullOrEmpty()) {
+                    if (cargando) {
+                        CircularProgressIndicator()
+                    } else {
+                        Spacer(Modifier.height(8.dp))
+
+                        FilledTonalButton(
+                            onClick = onCrear,
+                            modifier = Modifier.fillMaxWidth(0.8f)
+                        ) { Text("Crear familia") }
+
+                        OutlinedButton(
+                            onClick = onUnirse,
+                            modifier = Modifier.fillMaxWidth(0.8f)
+                        ) { Text("Unirse a familia") }
+                    }
                 } else {
-                    Spacer(Modifier.height(8.dp))
-
                     FilledTonalButton(
-                        onClick = onCrear,
+                        onClick = { miFamiliaId?.let(onIrALaFamilia) },
+                        enabled = miFamiliaId != null && !cargando,
                         modifier = Modifier.fillMaxWidth(0.8f)
-                    ) { Text("Crear familia") }
+                    ) { Text("Ir a mi familia") }
 
                     OutlinedButton(
-                        onClick = onUnirse,
+                        onClick = { mostrarConfirmacion = true },
+                        enabled = !cargando,
                         modifier = Modifier.fillMaxWidth(0.8f)
-                    ) { Text("Unirse a familia") }
-                }
-            } else {
-                FilledTonalButton(
-                    onClick = { miFamiliaId?.let(onIrALaFamilia) },
-                    enabled = !cargando,
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                ) {
-                    Text("Ir a mi familia")
+                    ) { Text("Eliminar familia") }
                 }
 
-
-                OutlinedButton(
-                    onClick = { mostrarConfirmacion = true },
-                    enabled = !cargando,
-                    modifier = Modifier.fillMaxWidth(0.8f)
-                ) { Text("Eliminar familia") }
-
+                error?.let {
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
             }
 
-            // Error (si ocurre al eliminar)
-            error?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Botón Atrás (abajo a la izquierda)
-            Row(
+            // Botón Cerrar sesión, fijo abajo y centrado
+            OutlinedButton(
+                onClick = onLogout,
+                enabled = !cargando,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp),
-                horizontalArrangement = Arrangement.Start
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(0.6f)
+                    .height(48.dp)
             ) {
-                OutlinedButton(onClick = onAtras) { Text("Atrás") }
+                Text("Cerrar sesión")
             }
-        }
 
-        // Diálogo confirmación de borrado
-        if (mostrarConfirmacion) {
-            AlertDialog(
-                onDismissRequest = { mostrarConfirmacion = false },
-                title = { Text("Eliminar familia") },
-                text = { Text("¿Estás segur@ de que quieres eliminar la familia que has creado?") },
-                confirmButton = {
-                    TextButton(
-                        onClick = {
-                            mostrarConfirmacion = false
-                            scope.launch {
-                                try {
-                                    vm.eliminarMiFamiliaCascade()
-                                    vm.refrescarMiFamilia() // tras borrar, dejará la pantalla solo con Crear/Unirse
-                                    error = null
-                                } catch (e: Exception) {
-                                    error = e.message ?: "Error eliminando la familia"
+            // Overlay de carga (bloquea taps) cuando cargando = true
+            if (cargando) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.Center),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            // Diálogo confirmación de borrado
+            if (mostrarConfirmacion) {
+                AlertDialog(
+                    onDismissRequest = { mostrarConfirmacion = false },
+                    title = { Text("Eliminar familia") },
+                    text = { Text("¿Estás segur@ de que quieres eliminar la familia que has creado?") },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                mostrarConfirmacion = false
+                                scope.launch {
+                                    try {
+                                        vm.eliminarMiFamiliaCascade()
+                                        // No hace falta refrescar a mano; observarMiFamilia() actualizará miFamiliaId
+                                        error = null
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "Error eliminando la familia"
+                                    }
                                 }
                             }
-                        }
-                    ) { Text("Sí") }
-                },
-                dismissButton = {
-                    TextButton(onClick = { mostrarConfirmacion = false }) { Text("No") }
-                }
-            )
+                        ) { Text("Sí") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { mostrarConfirmacion = false }) { Text("No") }
+                    }
+                )
+            }
         }
     }
 }
+
+
+
+
+
 
 
 

@@ -1,7 +1,9 @@
 package com.example.familywallet.presentacion.autenticacion
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,56 +27,78 @@ fun PantallaOlvidoPassword(
     val emailError = validarEmail(email)
     val formOk = emailError == null && !loading
 
-    Box(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+    Scaffold(containerColor = MaterialTheme.colorScheme.background) { inner ->
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .padding(24.dp),
+            color = MaterialTheme.colorScheme.background
         ) {
-            Text("¿Olvidaste tu contraseña?", style = MaterialTheme.typography.headlineMedium)
-            Text("Te enviaremos un correo para restablecerla.", style = MaterialTheme.typography.bodyMedium)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text("¿Olvidaste tu contraseña?", style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    "Te enviaremos un correo para restablecerla.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Correo electrónico") },
-                singleLine = true,
-                isError = emailError != null,
-                supportingText = { emailError?.let { Text(it) } },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                modifier = Modifier.fillMaxWidth(0.85f)
-            )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = {
+                        email = it
+                        error = null
+                        enviado = false
+                    },
+                    label = { Text("Correo electrónico") },
+                    singleLine = true,
+                    isError = emailError != null,
+                    supportingText = { emailError?.let { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            Button(
-                onClick = {
-                    loading = true
-                    vm.enviarResetPassword(
-                        email = email.trim(),
-                        onOk = {
-                            error = null
-                            enviado = true
-                            loading = false
-                            onEnviado()
-                            onVolverLogin()
-                        },
-                        onError = { msg ->
-                            error = msg
-                            loading = false
-                        }
-                    )
-                },
-                enabled = formOk,
-                modifier = Modifier.fillMaxWidth(0.6f).height(50.dp)
-            ) { Text(if (loading) "Enviando..." else "Enviar enlace") }
+                Button(
+                    onClick = {
+                        loading = true
+                        vm.enviarResetPassword(
+                            email = email.trim(),
+                            onOk = {
+                                loading = false
+                                error = null
+                                enviado = true
+                                onEnviado()
+                                onVolverLogin()
+                            },
+                            onError = { msg ->
+                                loading = false
+                                enviado = false
+                                error = msg
+                            }
+                        )
+                    },
+                    enabled = formOk,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp)
+                ) {
+                    Text(if (loading) "Enviando..." else "Enviar enlace")
+                }
 
-            if (enviado) {
-                Text("¡Listo! Revisa tu correo con el enlace de restablecimiento.")
+                if (enviado) {
+                    Text("¡Listo! Revisa tu correo con el enlace de restablecimiento.")
+                }
+                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+
+                TextButton(onClick = onVolverLogin) { Text("Volver a iniciar sesión") }
             }
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
-            TextButton(onClick = onVolverLogin) { Text("Volver a iniciar sesión") }
         }
     }
 }
+
+

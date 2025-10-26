@@ -17,6 +17,9 @@ object ServiceLocator {
     val authRepo: AuthRepositorio by lazy {
         FirebaseAuthRepositorio()
     }
+
+    val db = FirebaseFirestore.getInstance()
+    val solicitudesRepo: SolicitudesRepositorio = FirebaseSolicitudesRepositorio(db)
 }
 
 

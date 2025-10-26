@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.datos.modelos.Movimiento
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
+import com.example.familywallet.presentacion.ui.ScreenScaffold
 import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,19 +30,45 @@ fun PantallaCategorias(
     val totalesPorCategoria = remember(items) {
         items
             .asSequence()
-            .filter { it.tipo == Movimiento.Tipo.GASTO }      // si tu 'tipo' es String, usa: it.tipo == "GASTO"
+            .filter { it.tipo == Movimiento.Tipo.GASTO }
             .groupBy { it.categoria ?: "otros" }
-            .map { (categoria, lista) ->                      // devolvemos Pair(categoria,total)
+            .map { (categoria, lista) ->
                 categoria to lista.sumOf { it.cantidad }
             }
-            .sortedBy { it.first }                             // opcional: orden alfabético
+            .sortedBy { it.first }
     }
 
-    Scaffold(
+    ScreenScaffold(
         topBar = {
             TopAppBar(title = { Text("Categorías de gasto") })
-        },
-        bottomBar = {
+        }
+    ) { inner ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+        ) {
+            LazyColumn(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
+                items(totalesPorCategoria, key = { it.first }) { (categoria, total) ->
+                    ListItem(
+                        headlineContent = { Text(categoria) },
+                        trailingContent = {
+                            Text(
+                                text = formatter.format(total),
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    )
+                    Divider()
+                }
+            }
+
+            // Barra inferior con botón Atrás
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -51,28 +78,9 @@ fun PantallaCategorias(
                 OutlinedButton(onClick = onBack) { Text("Atrás") }
             }
         }
-    ) { inner ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            items(totalesPorCategoria, key = { it.first }) { (categoria, total) ->
-                ListItem(
-                    headlineContent = { Text(categoria) },
-                    trailingContent = {
-                        Text(
-                            text = formatter.format(total),
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                    }
-                )
-                Divider()
-            }
-        }
     }
 }
+
 
 
 
