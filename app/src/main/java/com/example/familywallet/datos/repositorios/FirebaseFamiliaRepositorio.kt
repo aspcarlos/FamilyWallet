@@ -1,5 +1,6 @@
 package com.example.familywallet.datos.repositorios
 
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import kotlinx.coroutines.channels.awaitClose
@@ -8,6 +9,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
+import kotlin.collections.mapOf
 
 class FirebaseFamiliaRepositorio(
     private val db: FirebaseFirestore
@@ -17,6 +19,23 @@ class FirebaseFamiliaRepositorio(
     private val miembros  get() = db.collection("miembros")
     private val movimientos = db.collection("movimientos")
 
+    override suspend fun salirDeFamilia(uid: String, familiaId: String) {
+        // 1) Borra la/s membresía/s del usuario en esa familia
+        val snap = miembros
+            .whereEqualTo("uid", uid)
+            .whereEqualTo("familiaId", familiaId)
+            .get()
+            .await()
+
+        val batch = db.batch()
+        snap.documents.forEach { batch.delete(it.reference) }
+
+        // 2) Limpia el campo familiaId en usuarios/{uid} para que el observer detecte "sin familia"
+        val usuarioRef = db.collection("usuarios").document(uid)
+        batch.set(usuarioRef, mapOf("familiaId" to FieldValue.delete()), com.google.firebase.firestore.SetOptions.merge())
+
+        batch.commit().await()
+    }
 
     override suspend fun nombreDe(familiaId: String): String? = try {
         val snap = familias.document(familiaId).get().await()
@@ -112,7 +131,7 @@ class FirebaseFamiliaRepositorio(
             )
         ).await()
 
-        // 3) **MUY IMPORTANTE**: reflejar la pertenencia en usuarios/{ownerUid}
+        // 3) Reflejar la pertenencia en usuarios/{ownerUid}
         db.collection("usuarios").document(ownerUid)
             .set(mapOf("familiaId" to ref.id), com.google.firebase.firestore.SetOptions.merge())
             .await()

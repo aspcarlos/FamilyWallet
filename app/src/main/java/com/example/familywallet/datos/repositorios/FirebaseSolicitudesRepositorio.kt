@@ -28,7 +28,6 @@ class FirebaseSolicitudesRepositorio(
         ).await()
     }
 
-
     override suspend fun listarPendientes(familiaId: String): List<Solicitud> = try {
         db.collection("solicitudes")
             .whereEqualTo("familiaId", familiaId)
@@ -90,7 +89,7 @@ class FirebaseSolicitudesRepositorio(
                 b.delete(solicitudesCol.document(solicitudId))
             }.await()
         } catch (e: Exception) {
-            Log.e("FW", "Fallo en aprobarSolicitud", e)   // ⬅️ verás el stack exacto en Logcat
+            Log.e("FW", "Fallo en aprobarSolicitud", e)
             throw e
         }
     }

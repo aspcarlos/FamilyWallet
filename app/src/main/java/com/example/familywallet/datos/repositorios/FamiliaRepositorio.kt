@@ -11,6 +11,7 @@ interface FamiliaRepositorio {
     suspend fun nombreDe(familiaId: String): String?
     // observar en tiempo real si el usuario es owner o miembro
     fun observarMiFamiliaId(uid: String): Flow<String?>
+    suspend fun salirDeFamilia(uid: String, familiaId: String)
 
 }
 

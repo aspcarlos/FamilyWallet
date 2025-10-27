@@ -34,6 +34,18 @@ class FamiliaViewModel(
         }
     }
 
+    fun salirDeFamilia() = viewModelScope.launch {
+        val uid = authRepo.usuarioActualUid ?: return@launch
+        val familiaId = _miFamiliaId.value ?: return@launch
+        _cargando.value = true
+        try {
+            familiaRepo.salirDeFamilia(uid, familiaId)
+            // el observer actualizará miFamiliaId → null
+        } finally {
+            _cargando.value = false
+        }
+    }
+
     suspend fun refrescarMiFamilia() {
         _cargando.value = true
         try {
