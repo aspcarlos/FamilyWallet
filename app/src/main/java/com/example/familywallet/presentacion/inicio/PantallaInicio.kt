@@ -13,7 +13,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.datos.repositorios.ServiceLocator
+import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
+import com.example.familywallet.presentacion.ui.MembershipGuard
 import com.example.familywallet.presentacion.ui.rangoAnioActual
 import com.example.familywallet.presentacion.ui.rangoDiaActual
 import com.example.familywallet.presentacion.ui.rangoMesActual
@@ -60,6 +62,7 @@ private fun TriLinesIcon(modifier: Modifier = Modifier) {
 fun PantallaInicio(
     familiaId: String,
     vm: MovimientosViewModel,
+    familiaVM: FamiliaViewModel,
     onIrAddGasto: () -> Unit,
     onIrAddIngreso: () -> Unit,
     onIrHistorial: () -> Unit,
@@ -68,9 +71,18 @@ fun PantallaInicio(
     onCambiarMoneda: () -> Unit = {},
     onVerCategorias: () -> Unit,
     onIrSolicitudes: () -> Unit,
+    onVerMiembros: () -> Unit,
+    onExpulsado: () -> Unit,
     esAdmin: Boolean = false,
     appName: String = "FamilyWallet"
 ) {
+    // 🔒 Guard: si me expulsan, salgo de inmediato
+    MembershipGuard(
+        familiaIdActual = familiaId,
+        familiaVM = familiaVM,
+        onExpulsado = onExpulsado
+    )
+
     // Cargar mes actual al entrar
     LaunchedEffect(familiaId) { vm.cargarMesActual(familiaId) }
 
@@ -173,6 +185,10 @@ fun PantallaInicio(
                                     onClick = { menuOpcionesAbierto = false; onIrSolicitudes() }
                                 )
                             }
+                            DropdownMenuItem(
+                                text = { Text("Miembros") },
+                                onClick = { menuOpcionesAbierto = false; onVerMiembros() }
+                            )
                         }
                     }
                 }

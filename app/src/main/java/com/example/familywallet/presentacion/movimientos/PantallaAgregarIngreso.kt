@@ -9,6 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.familywallet.presentacion.familia.FamiliaViewModel
+import com.example.familywallet.presentacion.ui.MembershipGuard
 import com.example.familywallet.presentacion.ui.ScreenScaffold
 import kotlinx.coroutines.launch
 
@@ -17,8 +19,16 @@ import kotlinx.coroutines.launch
 fun PantallaAgregarIngreso(
     familiaId: String,
     vm: MovimientosViewModel,
-    onGuardado: () -> Unit
+    familiaVM: FamiliaViewModel,
+    onGuardado: () -> Unit,
+    onExpulsado: () -> Unit
 ) {
+    MembershipGuard(
+        familiaIdActual = familiaId,
+        familiaVM = familiaVM,
+        onExpulsado = onExpulsado
+    )
+
     var cantidadText by remember { mutableStateOf("") }
     var nota by remember { mutableStateOf("") } // opcional
     var error by remember { mutableStateOf<String?>(null) }

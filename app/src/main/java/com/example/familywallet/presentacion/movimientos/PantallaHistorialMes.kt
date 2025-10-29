@@ -18,6 +18,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.example.familywallet.datos.modelos.Movimiento
+import com.example.familywallet.presentacion.familia.FamiliaViewModel
+import com.example.familywallet.presentacion.ui.MembershipGuard
 import com.example.familywallet.presentacion.ui.ScreenScaffold
 import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
 import java.text.SimpleDateFormat
@@ -38,8 +40,16 @@ fun PantallaHistorialMes(
     year: Int,
     month: Int,
     vm: MovimientosViewModel,
-    onBack: () -> Unit
+    familiaVM: FamiliaViewModel,
+    onBack: () -> Unit,
+    onExpulsado: () -> Unit
 ) {
+    MembershipGuard(
+        familiaIdActual = familiaId,
+        familiaVM = familiaVM,
+        onExpulsado = onExpulsado
+    )
+
     val items = vm.itemsDelMesState.value
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
 

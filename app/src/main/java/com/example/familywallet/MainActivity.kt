@@ -18,21 +18,15 @@ import com.example.familywallet.presentacion.autenticacion.AuthViewModel
 import com.example.familywallet.presentacion.autenticacion.PantallaLogin
 import com.example.familywallet.presentacion.autenticacion.PantallaOlvidoPassword
 import com.example.familywallet.presentacion.autenticacion.PantallaRegistro
-import com.example.familywallet.presentacion.familia.FamiliaVMFactory
-import com.example.familywallet.presentacion.familia.FamiliaViewModel
-import com.example.familywallet.presentacion.familia.PantallaConfigFamilia
-import com.example.familywallet.presentacion.familia.PantallaCrearFamilia
-import com.example.familywallet.presentacion.familia.PantallaUnirseFamilia
+import com.example.familywallet.presentacion.familia.*
 import com.example.familywallet.presentacion.inicio.PantallaCategorias
 import com.example.familywallet.presentacion.inicio.PantallaConfiguracion
 import com.example.familywallet.presentacion.inicio.PantallaInicio
 import com.example.familywallet.presentacion.inicio.PantallaMoneda
-import com.example.familywallet.presentacion.movimientos.MovimientosVMFactory
-import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
-import com.example.familywallet.presentacion.movimientos.PantallaAgregarGasto
-import com.example.familywallet.presentacion.movimientos.PantallaAgregarIngreso
-import com.example.familywallet.presentacion.movimientos.PantallaHistorial
-import com.example.familywallet.presentacion.movimientos.PantallaHistorialMes
+import com.example.familywallet.presentacion.miembros.MiembrosVMFactory
+import com.example.familywallet.presentacion.miembros.MiembrosViewModel
+import com.example.familywallet.presentacion.miembros.PantallaMiembros
+import com.example.familywallet.presentacion.movimientos.*
 import com.example.familywallet.presentacion.solicitudes.PantallaSolicitudes
 import com.example.familywallet.presentacion.solicitudes.SolicitudesVMFactory
 import com.example.familywallet.presentacion.solicitudes.SolicitudesViewModel
@@ -69,6 +63,10 @@ sealed class Ruta(val route: String) {
         const val ARG = "familiaId"
         val routeWithArg = "$route/{$ARG}"
         fun build(familiaId: String) = "$route/$familiaId"
+    }
+    data object Miembros : Ruta("miembros/{familiaId}") {
+        const val ARG = "familiaId"
+        fun build(familiaId: String) = "miembros/$familiaId"
     }
 }
 
@@ -109,6 +107,14 @@ fun AppNav(
     )
     val authVM: AuthViewModel = viewModel()
 
+    // Navegación a ConfigFamilia al ser expulsado
+    val goConfigOnKick: () -> Unit = {
+        nav.navigate(Ruta.ConfigFamilia.route) {
+            popUpTo(nav.graph.startDestinationId) { inclusive = false }
+            launchSingleTop = true
+        }
+    }
+
     NavHost(
         navController = nav,
         startDestination = Ruta.Login.route
@@ -138,7 +144,6 @@ fun AppNav(
         composable(Ruta.Registro.route) {
             PantallaRegistro(
                 onRegistrar = { _, _ ->
-                    // Tras crear cuenta se envía verificación y se vuelve a login
                     nav.navigate(Ruta.Login.route) {
                         popUpTo(Ruta.Registro.route) { inclusive = true }
                         launchSingleTop = true
@@ -157,7 +162,7 @@ fun AppNav(
 
         // 👨‍👩‍👧‍👦 Config familia
         composable(Ruta.ConfigFamilia.route) {
-            val authVM: AuthViewModel = viewModel()
+            val authVMLocal: AuthViewModel = viewModel()
             PantallaConfigFamilia(
                 vm = familiaVM,
                 onIrALaFamilia = { familiaId ->
@@ -169,7 +174,7 @@ fun AppNav(
                 onCrear = { nav.navigate(Ruta.CrearFamilia.route) },
                 onUnirse = { nav.navigate(Ruta.UnirseFamilia.route) },
                 onLogout = {
-                    authVM.logout()
+                    authVMLocal.logout()
                     nav.navigate(Ruta.Login.route) {
                         popUpTo(nav.graph.startDestinationId) { inclusive = true }
                         launchSingleTop = true
@@ -177,7 +182,6 @@ fun AppNav(
                 }
             )
         }
-
 
         composable(Ruta.CrearFamilia.route) {
             PantallaCrearFamilia(
@@ -208,7 +212,7 @@ fun AppNav(
             )
         }
 
-        // ⚙️ Configuración (tema oscuro + logout)
+        // ⚙️ Configuración
         composable(Ruta.Configuracion.route) {
             PantallaConfiguracion(
                 isDark = isDark,
@@ -243,6 +247,31 @@ fun AppNav(
             )
         }
 
+        // 👥 Lista de Miembros
+        composable(
+            route = Ruta.Miembros.route,
+            arguments = listOf(navArgument(Ruta.Miembros.ARG){ type = NavType.StringType })
+        ) { backStack ->
+            val familiaId = backStack.arguments?.getString(Ruta.Miembros.ARG) ?: return@composable
+            val vmMiembros: MiembrosViewModel = viewModel(
+                factory = MiembrosVMFactory(
+                    familiaRepo = ServiceLocator.familiaRepo
+                )
+            )
+            var esAdmin by remember { mutableStateOf(false) }
+            LaunchedEffect(familiaId) {
+                val uid = ServiceLocator.authRepo.usuarioActualUid
+                esAdmin = uid != null && ServiceLocator.familiaRepo.esAdmin(familiaId, uid)
+            }
+
+            PantallaMiembros(
+                familiaId = familiaId,
+                vm = vmMiembros,
+                esAdmin = esAdmin,
+                onBack = { nav.popBackStack() }
+            )
+        }
+
         // 🏠 Inicio
         composable(
             route = Ruta.Inicio.route,
@@ -250,22 +279,18 @@ fun AppNav(
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
 
-            // ⬇️ AQUI va el bloque esAdmin
             val uidActual = ServiceLocator.authRepo.usuarioActualUid
             var esAdmin by remember(familiaId, uidActual) { mutableStateOf(false) }
-
             LaunchedEffect(familiaId, uidActual) {
-                esAdmin = if (uidActual == null) {
-                    false
-                } else {
-                    try {
-                        ServiceLocator.familiaRepo.esAdmin(familiaId, uidActual)
-                    } catch (_: Exception) { false }
-                }
+                esAdmin = if (uidActual == null) false
+                else runCatching { ServiceLocator.familiaRepo.esAdmin(familiaId, uidActual) }
+                    .getOrElse { false }
             }
+
             PantallaInicio(
                 familiaId = familiaId,
                 vm = movimientosVM,
+                familiaVM = familiaVM,
                 onIrAddGasto = { nav.navigate("add_gasto/$familiaId") },
                 onIrAddIngreso = { nav.navigate("add_ingreso/$familiaId") },
                 onIrHistorial = { nav.navigate("historial/$familiaId") },
@@ -278,11 +303,12 @@ fun AppNav(
                 onAbrirConfiguracion = { nav.navigate(Ruta.Configuracion.route) },
                 onVerCategorias = { nav.navigate(Ruta.Categorias.route) },
                 onCambiarMoneda = { nav.navigate(Ruta.Moneda.route) },
-                onIrSolicitudes = { nav.navigate("solicitudes/$familiaId") },
-                esAdmin = esAdmin
+                onIrSolicitudes = { nav.navigate(Ruta.Solicitudes.build(familiaId)) },
+                onVerMiembros = { nav.navigate(Ruta.Miembros.build(familiaId)) },
+                esAdmin = esAdmin,
+                onExpulsado = goConfigOnKick
             )
         }
-
 
         // ➕ Gasto
         composable(
@@ -293,9 +319,9 @@ fun AppNav(
             PantallaAgregarGasto(
                 familiaId = familiaId,
                 vm = movimientosVM,
-                onGuardado = {
-                    nav.popBackStack() // volver a Inicio sin recrearlo
-                }
+                familiaVM = familiaVM,
+                onGuardado = { nav.popBackStack() },
+                onExpulsado = goConfigOnKick
             )
         }
 
@@ -308,9 +334,9 @@ fun AppNav(
             PantallaAgregarIngreso(
                 familiaId = familiaId,
                 vm = movimientosVM,
-                onGuardado = {
-                    nav.popBackStack()
-                }
+                familiaVM = familiaVM,
+                onGuardado = { nav.popBackStack() },
+                onExpulsado = goConfigOnKick
             )
         }
 
@@ -322,10 +348,12 @@ fun AppNav(
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
             PantallaHistorial(
                 familiaId = familiaId,
+                familiaVM = familiaVM,
                 onAbrirMes = { year, month ->
                     nav.navigate("historial_mes/$familiaId/$year/$month")
                 },
-                onBack = { nav.popBackStack() }
+                onBack = { nav.popBackStack() },
+                onExpulsado = goConfigOnKick
             )
         }
 
@@ -348,17 +376,18 @@ fun AppNav(
                 year = year,
                 month = month,
                 vm = movimientosVM,
-                onBack = { nav.popBackStack() }
+                familiaVM = familiaVM,
+                onBack = { nav.popBackStack() },
+                onExpulsado = goConfigOnKick
             )
         }
 
-        // 📬 Solicitudes (admin) – se navega desde Inicio cuando el menú lo lance
+        // 📬 Solicitudes (admin)
         composable(
             route = Ruta.Solicitudes.routeWithArg,
             arguments = listOf(navArgument(Ruta.Solicitudes.ARG) { type = NavType.StringType })
         ) { backStack ->
-            val familiaId = backStack.arguments?.getString(Ruta.Solicitudes.ARG)
-                ?: return@composable
+            val familiaId = backStack.arguments?.getString(Ruta.Solicitudes.ARG) ?: return@composable
 
             val soliVM: SolicitudesViewModel = viewModel(
                 factory = SolicitudesVMFactory(
@@ -371,11 +400,14 @@ fun AppNav(
             PantallaSolicitudes(
                 familiaId = familiaId,
                 vm = soliVM,
-                onBack = { nav.popBackStack() }
+                familiaVM = familiaVM,
+                onBack = { nav.popBackStack() },
+                onExpulsado = goConfigOnKick
             )
         }
     }
 }
+
 
 
 

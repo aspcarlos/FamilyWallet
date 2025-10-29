@@ -1,5 +1,6 @@
 package com.example.familywallet.datos.repositorios
 
+import com.example.familywallet.datos.modelos.Miembro
 import kotlinx.coroutines.flow.Flow
 
 interface FamiliaRepositorio {
@@ -12,7 +13,9 @@ interface FamiliaRepositorio {
     // observar en tiempo real si el usuario es owner o miembro
     fun observarMiFamiliaId(uid: String): Flow<String?>
     suspend fun salirDeFamilia(uid: String, familiaId: String)
-
+    suspend fun miembrosDe(familiaId: String): List<Miembro>
+    suspend fun expulsarMiembro(familiaId: String, miembroUid: String)
+    suspend fun ownerUidDe(familiaId: String): String?
 }
 
 

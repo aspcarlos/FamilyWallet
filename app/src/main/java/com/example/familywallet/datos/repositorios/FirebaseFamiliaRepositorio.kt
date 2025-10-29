@@ -10,6 +10,8 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
 import kotlin.collections.mapOf
+import com.example.familywallet.datos.modelos.Miembro
+
 
 class FirebaseFamiliaRepositorio(
     private val db: FirebaseFirestore
@@ -18,6 +20,39 @@ class FirebaseFamiliaRepositorio(
     private val familias  get() = db.collection("familias")
     private val miembros  get() = db.collection("miembros")
     private val movimientos = db.collection("movimientos")
+
+    override suspend fun ownerUidDe(familiaId: String): String? = try {
+        familias.document(familiaId).get().await().getString("ownerUid")
+    } catch (_: Exception) { null }
+
+    override suspend fun miembrosDe(familiaId: String): List<Miembro> = try {
+        miembros.whereEqualTo("familiaId", familiaId)
+            .get().await().documents.map { d ->
+                Miembro(
+                    id = d.id,
+                    uid = d.getString("uid") ?: "",
+                    alias = d.getString("alias") ?: "",
+                    rol = d.getString("rol") ?: "miembro"
+                )
+            }
+    } catch (_: Exception) { emptyList() }
+
+    override suspend fun expulsarMiembro(familiaId: String, uidMiembro: String) {
+        val miembros = db.collection("miembros")
+        val usuario  = db.collection("usuarios").document(uidMiembro)
+
+        val miembroDoc = miembros.whereEqualTo("familiaId", familiaId)
+            .whereEqualTo("uid", uidMiembro)
+            .limit(1).get().await().documents.firstOrNull()
+
+        db.runBatch { b ->
+            miembroDoc?.let { b.delete(it.reference) }
+            // opción A: eliminar el campo
+            b.update(usuario, mapOf("familiaId" to FieldValue.delete()))
+            // opción B: setear a null
+            // b.set(usuario, mapOf("familiaId" to null), SetOptions.merge())
+        }.await()
+    }
 
     override suspend fun salirDeFamilia(uid: String, familiaId: String) {
         // 1) Borra la/s membresía/s del usuario en esa familia

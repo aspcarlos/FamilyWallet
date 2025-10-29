@@ -7,6 +7,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.example.familywallet.presentacion.familia.FamiliaViewModel
+import com.example.familywallet.presentacion.ui.MembershipGuard
 import com.example.familywallet.presentacion.ui.ScreenScaffold
 import java.util.Calendar
 import java.util.Locale
@@ -15,9 +17,17 @@ import java.util.Locale
 @Composable
 fun PantallaHistorial(
     familiaId: String,
+    familiaVM: FamiliaViewModel,
     onAbrirMes: (Int, Int) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onExpulsado: () -> Unit
 ) {
+    MembershipGuard(
+        familiaIdActual = familiaId,
+        familiaVM = familiaVM,
+        onExpulsado = onExpulsado
+    )
+
     val c = Calendar.getInstance()
     val year = c.get(Calendar.YEAR)
 

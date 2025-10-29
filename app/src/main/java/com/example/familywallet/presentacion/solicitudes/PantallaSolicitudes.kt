@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.datos.modelos.Solicitud
+import com.example.familywallet.presentacion.familia.FamiliaViewModel
+import com.example.familywallet.presentacion.ui.MembershipGuard
 import com.example.familywallet.presentacion.ui.ScreenScaffold
 import kotlinx.coroutines.launch
 
@@ -26,8 +28,16 @@ data class SolicitudUi(
 fun PantallaSolicitudes(
     familiaId: String,
     vm: SolicitudesViewModel,
-    onBack: () -> Unit
+    familiaVM: FamiliaViewModel,
+    onBack: () -> Unit,
+    onExpulsado: () -> Unit
 ) {
+    MembershipGuard(
+        familiaIdActual = familiaId,
+        familiaVM = familiaVM,
+        onExpulsado = onExpulsado
+    )
+
     val pendientes: List<Solicitud> by vm.pendientes.collectAsState()
     val procesandoId: String? by vm.procesandoId.collectAsState()
     val error: String? by vm.error.collectAsState()
