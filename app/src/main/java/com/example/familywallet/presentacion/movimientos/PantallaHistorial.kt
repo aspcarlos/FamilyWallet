@@ -11,7 +11,6 @@ import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import com.example.familywallet.presentacion.ui.MembershipGuard
 import com.example.familywallet.presentacion.ui.ScreenScaffold
 import java.util.Calendar
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,8 +27,11 @@ fun PantallaHistorial(
         onExpulsado = onExpulsado
     )
 
-    val c = Calendar.getInstance()
-    val year = c.get(Calendar.YEAR)
+    val year = Calendar.getInstance().get(Calendar.YEAR)
+    val mesesEs = listOf(
+        "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+        "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    )
 
     ScreenScaffold(
         topBar = {
@@ -47,16 +49,13 @@ fun PantallaHistorial(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             items(12) { idx ->
-                val m = idx + 1
-                val nombreMes = Calendar.getInstance().apply { set(Calendar.MONTH, m - 1) }
-                    .getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
-                    ?.replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString() }
-                    ?: "Mes $m"
+                val mesNumero = idx + 1
+                val nombreMes = mesesEs[idx]
 
                 ElevatedCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { onAbrirMes(year, m) }
+                        .clickable { onAbrirMes(year, mesNumero) }
                 ) {
                     Row(
                         Modifier
@@ -72,6 +71,7 @@ fun PantallaHistorial(
         }
     }
 }
+
 
 
 

@@ -75,6 +75,8 @@ dependencies {
     implementation(libs.androidx.room.ktx)
     implementation(libs.material3)
     implementation(libs.foundation)
+    implementation(libs.androidx.ui.text)
+    implementation(libs.androidx.benchmark.traceprocessor)
 
     // Tests
     testImplementation(libs.junit)

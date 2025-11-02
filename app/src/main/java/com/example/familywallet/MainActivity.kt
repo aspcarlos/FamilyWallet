@@ -119,7 +119,7 @@ fun AppNav(
         navController = nav,
         startDestination = Ruta.Login.route
     ) {
-        // 🔐 LOGIN (redirección si ya hay sesión)
+        // LOGIN (redirección si ya hay sesión)
         composable(Ruta.Login.route) {
             LaunchedEffect(Unit) {
                 Firebase.auth.currentUser?.let {
@@ -160,7 +160,7 @@ fun AppNav(
             )
         }
 
-        // 👨‍👩‍👧‍👦 Config familia
+        // Config familia
         composable(Ruta.ConfigFamilia.route) {
             val authVMLocal: AuthViewModel = viewModel()
             PantallaConfigFamilia(
@@ -212,7 +212,7 @@ fun AppNav(
             )
         }
 
-        // ⚙️ Configuración
+        // Configuración
         composable(Ruta.Configuracion.route) {
             PantallaConfiguracion(
                 isDark = isDark,
@@ -239,7 +239,7 @@ fun AppNav(
             )
         }
 
-        // 🏷️ Categorías
+        // Categorías
         composable(Ruta.Categorias.route) {
             PantallaCategorias(
                 vm = movimientosVM,
@@ -247,7 +247,7 @@ fun AppNav(
             )
         }
 
-        // 👥 Lista de Miembros
+        // Lista de Miembros
         composable(
             route = Ruta.Miembros.route,
             arguments = listOf(navArgument(Ruta.Miembros.ARG){ type = NavType.StringType })
@@ -272,7 +272,7 @@ fun AppNav(
             )
         }
 
-        // 🏠 Inicio
+        // Inicio
         composable(
             route = Ruta.Inicio.route,
             arguments = listOf(navArgument("familiaId"){ type = NavType.StringType })
@@ -310,7 +310,7 @@ fun AppNav(
             )
         }
 
-        // ➕ Gasto
+        // Gasto
         composable(
             route = Ruta.AddGasto.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
@@ -321,11 +321,12 @@ fun AppNav(
                 vm = movimientosVM,
                 familiaVM = familiaVM,
                 onGuardado = { nav.popBackStack() },
+                onBack = { nav.popBackStack() },
                 onExpulsado = goConfigOnKick
             )
         }
 
-        // ➕ Ingreso
+        // Ingreso
         composable(
             route = Ruta.AddIngreso.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
@@ -336,11 +337,12 @@ fun AppNav(
                 vm = movimientosVM,
                 familiaVM = familiaVM,
                 onGuardado = { nav.popBackStack() },
+                onBack = { nav.popBackStack() },
                 onExpulsado = goConfigOnKick
             )
         }
 
-        // 📚 Historial (lista de meses)
+        // Historial (lista de meses)
         composable(
             route = Ruta.Historial.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
@@ -357,7 +359,7 @@ fun AppNav(
             )
         }
 
-        // 📅 Historial del mes
+        // Historial del mes
         composable(
             route = Ruta.HistorialMes.route,
             arguments = listOf(
@@ -382,7 +384,7 @@ fun AppNav(
             )
         }
 
-        // 📬 Solicitudes (admin)
+        // Solicitudes (admin)
         composable(
             route = Ruta.Solicitudes.routeWithArg,
             arguments = listOf(navArgument(Ruta.Solicitudes.ARG) { type = NavType.StringType })
