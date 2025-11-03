@@ -7,7 +7,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.familywallet.datos.repositorios.ServiceLocator
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -20,30 +19,13 @@ fun PantallaConfigFamilia(
     onLogout: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-
-    // Estados del VM
     val miFamiliaId by vm.miFamiliaId.collectAsState(initial = null)
     val cargando   by vm.cargando.collectAsState(initial = false)
 
-    // Estado de UI
-    var mostrarConfirmEliminar by remember { mutableStateOf(false) }
-    var mostrarConfirmSalir by remember { mutableStateOf(false) }
+    var mostrarConfirmacion by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    // ¿Es admin?
-    var esAdmin by remember { mutableStateOf(false) }
-    val uidActual = remember { ServiceLocator.authRepo.usuarioActualUid }
-
-    // Observación en tiempo real del id de familia (para que cambie de "Crear/Unirse" a "Ir a mi familia")
     LaunchedEffect(Unit) { vm.observarMiFamilia() }
-
-    // Recalcular si es admin cuando cambie la familia o el usuario
-    LaunchedEffect(miFamiliaId, uidActual) {
-        esAdmin = if (miFamiliaId != null && uidActual != null) {
-            runCatching { ServiceLocator.familiaRepo.esAdmin(miFamiliaId!!, uidActual) }
-                .getOrDefault(false)
-        } else false
-    }
 
     Scaffold { inner ->
         Box(
@@ -52,7 +34,6 @@ fun PantallaConfigFamilia(
                 .padding(inner)
                 .padding(24.dp)
         ) {
-            // Contenido principal centrado
             Column(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -72,39 +53,32 @@ fun PantallaConfigFamilia(
                     } else {
                         Spacer(Modifier.height(8.dp))
 
-                        FilledTonalButton(
+                        // VERDE
+                        Button(
                             onClick = onCrear,
                             modifier = Modifier.fillMaxWidth(0.8f)
                         ) { Text("Crear familia") }
 
-                        OutlinedButton(
+                        // VERDE
+                        Button(
                             onClick = onUnirse,
                             modifier = Modifier.fillMaxWidth(0.8f)
                         ) { Text("Unirse a familia") }
                     }
                 } else {
-                    // Hay familia
-                    FilledTonalButton(
-                        onClick = { onIrALaFamilia(miFamiliaId!!) },
+                    // VERDE
+                    Button(
+                        onClick = { miFamiliaId?.let(onIrALaFamilia) },
                         enabled = !cargando,
                         modifier = Modifier.fillMaxWidth(0.8f)
                     ) { Text("Ir a mi familia") }
 
-                    if (esAdmin) {
-                        // Dueño → Eliminar la familia
-                        OutlinedButton(
-                            onClick = { mostrarConfirmEliminar = true },
-                            enabled = !cargando,
-                            modifier = Modifier.fillMaxWidth(0.8f)
-                        ) { Text("Eliminar familia") }
-                    } else {
-                        // Miembro → Salir de la familia
-                        OutlinedButton(
-                            onClick = { mostrarConfirmSalir = true },
-                            enabled = !cargando,
-                            modifier = Modifier.fillMaxWidth(0.8f)
-                        ) { Text("Salir de la familia") }
-                    }
+                    // VERDE
+                    Button(
+                        onClick = { mostrarConfirmacion = true },
+                        enabled = !cargando,
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    ) { Text("Eliminar familia") }
                 }
 
                 error?.let {
@@ -116,36 +90,38 @@ fun PantallaConfigFamilia(
                 }
             }
 
-            // Botón Cerrar sesión, fijo abajo y centrado
-            OutlinedButton(
+            // VERDE
+            Button(
                 onClick = onLogout,
                 enabled = !cargando,
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth(0.6f)
                     .height(48.dp)
-            ) { Text("Cerrar sesión") }
+            ) {
+                Text("Cerrar sesión")
+            }
 
-            // Overlay de carga
             if (cargando) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .align(Alignment.Center),
                     contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
+                ) {
+                    CircularProgressIndicator()
+                }
             }
 
-            // Diálogo confirmación: ELIMINAR (solo admin)
-            if (mostrarConfirmEliminar) {
+            if (mostrarConfirmacion) {
                 AlertDialog(
-                    onDismissRequest = { mostrarConfirmEliminar = false },
+                    onDismissRequest = { mostrarConfirmacion = false },
                     title = { Text("Eliminar familia") },
                     text = { Text("¿Estás segur@ de que quieres eliminar la familia que has creado?") },
                     confirmButton = {
                         TextButton(
                             onClick = {
-                                mostrarConfirmEliminar = false
+                                mostrarConfirmacion = false
                                 scope.launch {
                                     try {
                                         vm.eliminarMiFamiliaCascade()
@@ -158,41 +134,16 @@ fun PantallaConfigFamilia(
                         ) { Text("Sí") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { mostrarConfirmEliminar = false }) { Text("No") }
-                    }
-                )
-            }
-
-            // Diálogo confirmación: SALIR (solo miembro)
-            if (mostrarConfirmSalir) {
-                AlertDialog(
-                    onDismissRequest = { mostrarConfirmSalir = false },
-                    title = { Text("Salir de la familia") },
-                    text = { Text("¿Deseas salir de esta familia? Podrás unirte de nuevo cuando quieras.") },
-                    confirmButton = {
-                        TextButton(
-                            onClick = {
-                                mostrarConfirmSalir = false
-                                scope.launch {
-                                    try {
-                                        vm.salirDeFamilia()
-                                        // El observer actualizará miFamiliaId → null
-                                        error = null
-                                    } catch (e: Exception) {
-                                        error = e.message ?: "No se pudo salir de la familia"
-                                    }
-                                }
-                            }
-                        ) { Text("Sí") }
-                    },
-                    dismissButton = {
-                        TextButton(onClick = { mostrarConfirmSalir = false }) { Text("No") }
+                        TextButton(onClick = { mostrarConfirmacion = false }) {
+                            Text("No")
+                        }
                     }
                 )
             }
         }
     }
 }
+
 
 
 

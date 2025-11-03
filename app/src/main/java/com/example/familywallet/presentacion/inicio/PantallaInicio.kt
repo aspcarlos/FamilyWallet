@@ -25,12 +25,11 @@ import java.util.Locale
 
 @Composable
 private fun TriLinesIcon(modifier: Modifier = Modifier) {
-    val lineColor = MaterialTheme.colorScheme.onSurface
+    val lineColor = MaterialTheme.colorScheme.onPrimary
     Canvas(modifier = modifier.size(24.dp)) {
         val h = size.height
         val w = size.width
         val stroke = 3f
-        // 1ª línea
         drawLine(
             color = lineColor,
             start = Offset(w * 0.25f, h * 0.30f),
@@ -38,7 +37,6 @@ private fun TriLinesIcon(modifier: Modifier = Modifier) {
             strokeWidth = stroke,
             cap = StrokeCap.Round
         )
-        // 2ª línea
         drawLine(
             color = lineColor,
             start = Offset(w * 0.40f, h * 0.50f),
@@ -46,7 +44,6 @@ private fun TriLinesIcon(modifier: Modifier = Modifier) {
             strokeWidth = stroke,
             cap = StrokeCap.Round
         )
-        // 3ª línea
         drawLine(
             color = lineColor,
             start = Offset(w * 0.55f, h * 0.70f),
@@ -76,24 +73,17 @@ fun PantallaInicio(
     esAdmin: Boolean = false,
     appName: String = "FamilyWallet"
 ) {
-    // 🔒 Guard: si me expulsan, salgo de inmediato
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
         onExpulsado = onExpulsado
     )
 
-    // Cargar mes actual al entrar
     LaunchedEffect(familiaId) { vm.cargarMesActual(familiaId) }
 
-    // Nombre de la familia
     var nombreFamilia by remember(familiaId) { mutableStateOf<String?>(null) }
     LaunchedEffect(familiaId) {
-        nombreFamilia = try {
-            ServiceLocator.familiaRepo.nombreDe(familiaId)
-        } catch (_: Exception) {
-            null
-        }
+        nombreFamilia = runCatching { ServiceLocator.familiaRepo.nombreDe(familiaId) }.getOrNull()
     }
 
     val ingresos  = vm.totalIngresos
@@ -107,22 +97,28 @@ fun PantallaInicio(
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
+                    titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 navigationIcon = {
                     Text(
-                        text  = appName,
+                        text = appName,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.padding(start = 16.dp)
                     )
                 },
                 title = {},
                 actions = {
-                    // Menú de periodo (icono 3 líneas)
                     Box {
                         IconButton(onClick = { menuPeriodoAbierto = true }) { TriLinesIcon() }
                         DropdownMenu(
                             expanded = menuPeriodoAbierto,
-                            onDismissRequest = { menuPeriodoAbierto = false }
+                            onDismissRequest = { menuPeriodoAbierto = false },
+                            containerColor = MaterialTheme.colorScheme.background
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Día") },
@@ -157,14 +153,14 @@ fun PantallaInicio(
 
                     Spacer(Modifier.width(4.dp))
 
-                    // 3 puntos (opciones)
                     Box {
                         IconButton(onClick = { menuOpcionesAbierto = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
                         }
                         DropdownMenu(
                             expanded = menuOpcionesAbierto,
-                            onDismissRequest = { menuOpcionesAbierto = false }
+                            onDismissRequest = { menuOpcionesAbierto = false },
+                            containerColor = MaterialTheme.colorScheme.background
                         ) {
                             DropdownMenuItem(
                                 text = { Text("Categorías de gastos") },
@@ -178,6 +174,7 @@ fun PantallaInicio(
                                 text = { Text("Moneda") },
                                 onClick = { menuOpcionesAbierto = false; onCambiarMoneda() }
                             )
+
                             if (esAdmin) {
                                 Divider()
                                 DropdownMenuItem(
@@ -185,6 +182,8 @@ fun PantallaInicio(
                                     onClick = { menuOpcionesAbierto = false; onIrSolicitudes() }
                                 )
                             }
+
+                            Divider()
                             DropdownMenuItem(
                                 text = { Text("Miembros") },
                                 onClick = { menuOpcionesAbierto = false; onVerMiembros() }
@@ -195,35 +194,28 @@ fun PantallaInicio(
             )
         }
     ) { inner ->
-        // Layout central + botón "Atrás"
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner)
                 .padding(horizontal = 24.dp)
         ) {
-            // Contenido CENTRADO
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Nombre de la familia centrado
-                nombreFamilia?.let {
+                if (!nombreFamilia.isNullOrBlank()) {
                     Text(
-                        text = it,
-                        style = MaterialTheme.typography.headlineMedium,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        text = nombreFamilia!!,
+                        style = MaterialTheme.typography.headlineSmall,
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(Modifier.height(16.dp)) // separación con la fecha
+                    Spacer(Modifier.height(8.dp))
                 }
 
-                // Fecha / etiqueta del periodo
                 Text(
                     text = vm.etiquetaPeriodo.ifBlank { vm.nombreMesActual() },
-                    style = MaterialTheme.typography.titleLarge,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    style = MaterialTheme.typography.titleLarge
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -233,7 +225,7 @@ fun PantallaInicio(
                 Text(text = "Gastos: ${formatter.format(gastos)}")
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text  = "Resumen: ${formatter.format(ingresos - gastos)}",
+                    text = "Resumen: ${formatter.format(ingresos - gastos)}",
                     color = if ((ingresos - gastos) >= 0)
                         MaterialTheme.colorScheme.primary
                     else
@@ -242,7 +234,12 @@ fun PantallaInicio(
 
                 Spacer(Modifier.height(24.dp))
 
-                Button(onClick = onIrHistorial) { Text("Ver historial") }
+                Button(
+                    onClick = onIrHistorial,
+                    modifier = Modifier
+                        .fillMaxWidth(0.5f)
+                        .height(44.dp)
+                ) { Text("Ver historial") }
 
                 Spacer(Modifier.height(24.dp))
 
@@ -250,23 +247,37 @@ fun PantallaInicio(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(onClick = onIrAddGasto)   { Text("Añadir gasto") }
-                    OutlinedButton(onClick = onIrAddIngreso) { Text("Añadir ingreso") }
+                    Button(
+                        onClick = onIrAddGasto,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) { Text("Añadir gasto") }
+
+                    Button(
+                        onClick = onIrAddIngreso,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
+                    ) { Text("Añadir ingreso") }
                 }
             }
 
-            // Botón "Atrás" abajo-izquierda
-            OutlinedButton(
+            Button(
                 onClick = onBackToConfig,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(bottom = 16.dp)
+                    .height(44.dp)
             ) {
                 Text("Atrás")
             }
         }
     }
 }
+
+
+
 
 
 
