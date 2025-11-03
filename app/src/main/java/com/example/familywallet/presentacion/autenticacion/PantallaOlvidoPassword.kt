@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.familywallet.ui.validarEmail
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaOlvidoPassword(
     vm: AuthViewModel = viewModel(),
@@ -24,16 +25,20 @@ fun PantallaOlvidoPassword(
     var enviado by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
 
-    val emailError = validarEmail(email)
-    val formOk = emailError == null && !loading
+    // NUEVO: flag para no mostrar error al entrar
+    var emailTouched by remember { mutableStateOf(false) }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { inner ->
-        Surface(
+    val rawEmailError = validarEmail(email)
+    val emailErrorToShow = if (emailTouched) rawEmailError else null
+    val formOk = rawEmailError == null && !loading
+
+    Scaffold { inner ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner)
                 .padding(24.dp),
-            color = MaterialTheme.colorScheme.background
+            contentAlignment = Alignment.Center
         ) {
             Column(
                 modifier = Modifier
@@ -52,15 +57,16 @@ fun PantallaOlvidoPassword(
                     value = email,
                     onValueChange = {
                         email = it
+                        emailTouched = true
                         error = null
                         enviado = false
                     },
                     label = { Text("Correo electrónico") },
                     singleLine = true,
-                    isError = emailError != null,
-                    supportingText = { emailError?.let { Text(it, color = MaterialTheme.colorScheme.error) } },
+                    isError = emailErrorToShow != null,
+                    supportingText = { emailErrorToShow?.let { Text(it) } },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(0.85f)
                 )
 
                 Button(
@@ -84,7 +90,7 @@ fun PantallaOlvidoPassword(
                     },
                     enabled = formOk,
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxWidth(0.6f)
                         .height(50.dp)
                 ) {
                     Text(if (loading) "Enviando..." else "Enviar enlace")
@@ -100,5 +106,7 @@ fun PantallaOlvidoPassword(
         }
     }
 }
+
+
 
 

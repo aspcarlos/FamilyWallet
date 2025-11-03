@@ -1,9 +1,7 @@
 package com.example.familywallet.presentacion.autenticacion
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -15,6 +13,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.familywallet.ui.validarEmail
 import com.example.familywallet.ui.validarPassword
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaRegistro(
     vm: AuthViewModel = viewModel(),
@@ -39,22 +38,25 @@ fun PantallaRegistro(
     fun validarCampos(): Boolean {
         emailError = validarEmail(email.trim())
         passError = validarPassword(pass)
-        pass2Error = if (pass2.isBlank()) "Repite la contraseña" else null
+        pass2Error = when {
+            pass2.isBlank() -> "Repite la contraseña"
+            else -> null
+        }
         return emailError == null && passError == null && pass2Error == null && !mismatch
     }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { inner ->
-        Surface(
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(inner)
                 .padding(24.dp),
-            color = MaterialTheme.colorScheme.background
+            contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState()),
+                modifier = Modifier.fillMaxWidth(0.9f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -128,6 +130,7 @@ fun PantallaRegistro(
         }
     }
 }
+
 
 
 
