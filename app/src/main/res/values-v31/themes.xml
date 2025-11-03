@@ -7,5 +7,4 @@
         <!-- Splash Android 12+ -->
         <item name="android:windowSplashScreenBackground">@color/splash_light_green</item>
     </style>
-
 </resources>
