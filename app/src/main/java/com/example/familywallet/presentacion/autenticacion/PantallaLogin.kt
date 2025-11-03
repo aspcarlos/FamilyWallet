@@ -58,7 +58,10 @@ fun PantallaLogin(
             modifier = Modifier.fillMaxWidth()
         ) {
 
-            Text("Iniciar sesión", style = MaterialTheme.typography.headlineMedium)
+            Text("Iniciar sesión",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.primary
+            )
 
             OutlinedTextField(
                 value = email,

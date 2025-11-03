@@ -42,7 +42,8 @@ fun PantallaUnirseFamilia(
                 text = "Unirse a una familia",
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                color = MaterialTheme.colorScheme.primary
             )
 
             OutlinedTextField(

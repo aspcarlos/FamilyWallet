@@ -48,7 +48,8 @@ fun PantallaCrearFamilia(
             Text(
                 text = "Crear familia",
                 style = MaterialTheme.typography.headlineSmall,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.primary
             )
 
             OutlinedTextField(
