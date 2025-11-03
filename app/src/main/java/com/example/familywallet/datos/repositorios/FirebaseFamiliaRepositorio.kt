@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.tasks.await
 import kotlin.collections.mapOf
 import com.example.familywallet.datos.modelos.Miembro
+import com.google.firebase.firestore.SetOptions
 
 
 class FirebaseFamiliaRepositorio(
@@ -102,34 +103,46 @@ class FirebaseFamiliaRepositorio(
 
     override fun observarMiFamiliaId(uid: String): Flow<String?> = callbackFlow {
         var last: String? = null
-        fun emitIfChanged(n: String?) { if (n != last) { last = n; trySend(n) } }
+        fun emitIfChanged(n: String?) {
+            if (n != last) {
+                last = n
+                trySend(n)
+            }
+        }
 
         // Listener principal: usuarios/{uid}
-        val regUser: ListenerRegistration =
-            db.collection("usuarios").document(uid)
-                .addSnapshotListener { snap, err ->
-                    if (err != null) return@addSnapshotListener
-                    val fam = snap?.getString("familiaId")
-                    emitIfChanged(fam)
-                }
+        val regUser = db.collection("usuarios").document(uid)
+            .addSnapshotListener { snap, err ->
+                if (err != null) return@addSnapshotListener
+                // si no existe el doc o no tiene familiaId -> null
+                val fam = snap?.getString("familiaId")?.takeUnless { it.isBlank() }
+                emitIfChanged(fam)
+            }
 
-        // (Opcional) respaldo: owner
-        val regOwner: ListenerRegistration =
-            db.collection("familias").whereEqualTo("ownerUid", uid).limit(1)
-                .addSnapshotListener { s, e ->
-                    if (e != null) return@addSnapshotListener
-                    val fam = s?.documents?.firstOrNull()?.id
-                    if (!fam.isNullOrBlank()) emitIfChanged(fam)
-                }
+        // Respaldo: es owner de alguna familia
+        val regOwner = db.collection("familias")
+            .whereEqualTo("ownerUid", uid)
+            .limit(1)
+            .addSnapshotListener { s, e ->
+                if (e != null) return@addSnapshotListener
+                val fam = s?.documents?.firstOrNull()?.id
+                // si ya no hay familia donde sea owner -> null
+                emitIfChanged(fam?.takeUnless { it.isBlank() })
+            }
 
-        // (Opcional) respaldo: miembro
-        val regMember: ListenerRegistration =
-            db.collection("miembros").whereEqualTo("uid", uid).limit(1)
-                .addSnapshotListener { s, e ->
-                    if (e != null) return@addSnapshotListener
-                    val fam = s?.documents?.firstOrNull()?.getString("familiaId")
-                    if (!fam.isNullOrBlank()) emitIfChanged(fam)
-                }
+        // Respaldo: es miembro de alguna familia
+        val regMember = db.collection("miembros")
+            .whereEqualTo("uid", uid)
+            .limit(1)
+            .addSnapshotListener { s, e ->
+                if (e != null) return@addSnapshotListener
+                val fam = s?.documents
+                    ?.firstOrNull()
+                    ?.getString("familiaId")
+                    ?.takeUnless { it.isBlank() }
+                // si ya no es miembro de ninguna -> null
+                emitIfChanged(fam)
+            }
 
         awaitClose {
             regUser.remove()
@@ -137,7 +150,6 @@ class FirebaseFamiliaRepositorio(
             regMember.remove()
         }
     }
-
 
     override suspend fun crearFamilia(
         nombre: String,
@@ -168,7 +180,7 @@ class FirebaseFamiliaRepositorio(
 
         // 3) Reflejar la pertenencia en usuarios/{ownerUid}
         db.collection("usuarios").document(ownerUid)
-            .set(mapOf("familiaId" to ref.id), com.google.firebase.firestore.SetOptions.merge())
+            .set(mapOf("familiaId" to ref.id), SetOptions.merge())
             .await()
 
         return ref.id
@@ -176,8 +188,32 @@ class FirebaseFamiliaRepositorio(
 
 
     override suspend fun eliminarFamilia(familiaId: String) {
+        // 1) Limpiar familiaId en todos los usuarios miembros de esa familia
+        val miembrosSnap = miembros
+            .whereEqualTo("familiaId", familiaId)
+            .get()
+            .await()
+
+        if (!miembrosSnap.isEmpty) {
+            val batch = db.batch()
+            val usuariosCol = db.collection("usuarios")
+
+            miembrosSnap.documents.forEach { doc ->
+                val uid = doc.getString("uid") ?: return@forEach
+                val userRef = usuariosCol.document(uid)
+
+                // puedes borrar el campo o ponerlo a null, pero que deje de tener un id válido
+                batch.update(userRef, mapOf("familiaId" to FieldValue.delete()))
+            }
+
+            batch.commit().await()
+        }
+
+        // 2) Borrar movimientos y miembros relacionados (como ya tenías)
         deleteByFieldPaged(movimientos, "familiaId", familiaId)
         deleteByFieldPaged(miembros,    "familiaId", familiaId)
+
+        // 3) Borrar el documento de la familia
         familias.document(familiaId).delete().await()
     }
 

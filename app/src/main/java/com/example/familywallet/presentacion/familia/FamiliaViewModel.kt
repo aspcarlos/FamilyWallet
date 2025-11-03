@@ -91,12 +91,13 @@ class FamiliaViewModel(
             _cargando.value = true
             try {
                 familiaRepo.eliminarFamilia(id)
-                _miFamiliaId.value = null        // forzamos pantalla a “Crear/Unirse”
+                _miFamiliaId.value = null    // -> PantallaConfigFamilia pasa a “Crear / Unirse”
             } finally {
                 _cargando.value = false
             }
         }
     }
+
 }
 
 

@@ -137,7 +137,8 @@ fun PantallaConfigFamilia(
                         TextButton(onClick = { mostrarConfirmacion = false }) {
                             Text("No")
                         }
-                    }
+                    },
+                    containerColor = MaterialTheme.colorScheme.background
                 )
             }
         }
