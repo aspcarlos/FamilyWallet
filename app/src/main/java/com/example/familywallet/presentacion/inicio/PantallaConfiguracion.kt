@@ -21,7 +21,7 @@ fun PantallaConfiguracion(
     ScreenScaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Configuración") },
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
@@ -30,38 +30,49 @@ fun PantallaConfiguracion(
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            // Tema oscuro
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text("Tema oscuro")
-                Switch(
-                    checked = isDark,
-                    onCheckedChange = { onToggleDark() }
+                Text(
+                    text = "Configuración",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary
                 )
-            }
 
-            Divider()
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Tema oscuro")
+                    Switch(
+                        checked = isDark,
+                        onCheckedChange = { onToggleDark() }
+                    )
+                }
 
-            // Cerrar sesión
-            Button(
-                onClick = onLogout,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Cerrar sesión")
+                Divider()
+
+                Button(
+                    onClick = onLogout,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Cerrar sesión")
+                }
             }
         }
     }
 }
+
 
 
 

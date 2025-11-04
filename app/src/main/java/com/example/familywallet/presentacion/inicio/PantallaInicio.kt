@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -24,28 +25,31 @@ import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
 import java.util.Locale
 
 @Composable
-private fun TriLinesIcon(modifier: Modifier = Modifier) {
-    val lineColor = MaterialTheme.colorScheme.onPrimary
+private fun TriLinesIcon(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.onSurface
+) {
     Canvas(modifier = modifier.size(24.dp)) {
         val h = size.height
         val w = size.width
         val stroke = 3f
+
         drawLine(
-            color = lineColor,
+            color = color,
             start = Offset(w * 0.25f, h * 0.30f),
             end   = Offset(w * 0.95f, h * 0.30f),
             strokeWidth = stroke,
             cap = StrokeCap.Round
         )
         drawLine(
-            color = lineColor,
+            color = color,
             start = Offset(w * 0.40f, h * 0.50f),
             end   = Offset(w * 0.95f, h * 0.50f),
             strokeWidth = stroke,
             cap = StrokeCap.Round
         )
         drawLine(
-            color = lineColor,
+            color = color,
             start = Offset(w * 0.55f, h * 0.70f),
             end   = Offset(w * 0.95f, h * 0.70f),
             strokeWidth = stroke,
@@ -73,17 +77,24 @@ fun PantallaInicio(
     esAdmin: Boolean = false,
     appName: String = "FamilyWallet"
 ) {
+    // Si me expulsan, salgo de la familia
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
         onExpulsado = onExpulsado
     )
 
+    // Cargar mes actual
     LaunchedEffect(familiaId) { vm.cargarMesActual(familiaId) }
 
+    // Nombre de la familia
     var nombreFamilia by remember(familiaId) { mutableStateOf<String?>(null) }
     LaunchedEffect(familiaId) {
-        nombreFamilia = runCatching { ServiceLocator.familiaRepo.nombreDe(familiaId) }.getOrNull()
+        nombreFamilia = try {
+            ServiceLocator.familiaRepo.nombreDe(familiaId)
+        } catch (_: Exception) {
+            null
+        }
     }
 
     val ingresos  = vm.totalIngresos
@@ -99,22 +110,24 @@ fun PantallaInicio(
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
-                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
                     titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onPrimary,
                     actionIconContentColor = MaterialTheme.colorScheme.onPrimary
                 ),
                 navigationIcon = {
                     Text(
                         text = appName,
                         style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier.padding(start = 16.dp)
                     )
                 },
                 title = {},
                 actions = {
+                    // Menú de periodo (icono 3 líneas)
                     Box {
-                        IconButton(onClick = { menuPeriodoAbierto = true }) { TriLinesIcon() }
+                        IconButton(onClick = { menuPeriodoAbierto = true }) {
+                            TriLinesIcon(color = MaterialTheme.colorScheme.onPrimary)
+                        }
                         DropdownMenu(
                             expanded = menuPeriodoAbierto,
                             onDismissRequest = { menuPeriodoAbierto = false },
@@ -153,9 +166,13 @@ fun PantallaInicio(
 
                     Spacer(Modifier.width(4.dp))
 
+                    // Menú de 3 puntos
                     Box {
                         IconButton(onClick = { menuOpcionesAbierto = true }) {
-                            Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = "Más opciones"
+                            )
                         }
                         DropdownMenu(
                             expanded = menuOpcionesAbierto,
@@ -200,22 +217,26 @@ fun PantallaInicio(
                 .padding(inner)
                 .padding(horizontal = 24.dp)
         ) {
+            // Contenido centrado
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                if (!nombreFamilia.isNullOrBlank()) {
-                    Text(
-                        text = nombreFamilia!!,
-                        style = MaterialTheme.typography.headlineSmall,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(Modifier.height(8.dp))
-                }
+                // Nombre de la familia
+                Text(
+                    text = "Familia ${nombreFamilia.orEmpty()}".trim(),
+                    style = MaterialTheme.typography.titleLarge,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
+                Spacer(Modifier.height(24.dp))
+
+                // Mes / periodo
                 Text(
                     text = vm.etiquetaPeriodo.ifBlank { vm.nombreMesActual() },
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleMedium,
+                    textAlign = TextAlign.Center
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -234,12 +255,7 @@ fun PantallaInicio(
 
                 Spacer(Modifier.height(24.dp))
 
-                Button(
-                    onClick = onIrHistorial,
-                    modifier = Modifier
-                        .fillMaxWidth(0.5f)
-                        .height(44.dp)
-                ) { Text("Ver historial") }
+                Button(onClick = onIrHistorial) { Text("Ver historial") }
 
                 Spacer(Modifier.height(24.dp))
 
@@ -247,34 +263,26 @@ fun PantallaInicio(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Button(
-                        onClick = onIrAddGasto,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                    ) { Text("Añadir gasto") }
-
-                    Button(
-                        onClick = onIrAddIngreso,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                    ) { Text("Añadir ingreso") }
+                    Button(onClick = onIrAddGasto) { Text("Añadir gasto") }
+                    Button(onClick = onIrAddIngreso) { Text("Añadir ingreso") }
                 }
             }
 
+            // Botón Atrás abajo a la izquierda
             Button(
                 onClick = onBackToConfig,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .padding(bottom = 16.dp)
-                    .height(44.dp)
             ) {
                 Text("Atrás")
             }
         }
     }
 }
+
+
+
 
 
 

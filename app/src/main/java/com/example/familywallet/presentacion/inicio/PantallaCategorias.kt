@@ -1,13 +1,30 @@
 package com.example.familywallet.presentacion.inicio
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.datos.modelos.Movimiento
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
@@ -20,18 +37,14 @@ fun PantallaCategorias(
     vm: MovimientosViewModel,
     onBack: () -> Unit
 ) {
-    // Formateador de moneda reactivo al cambio de vm.monedaActual
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
-
-    // Lista reactiva del mes
     val items by vm.itemsDelMesState
 
-    // Totales de GASTO por categoría (se recalcula cuando 'items' cambia)
     val totalesPorCategoria = remember(items) {
         items
             .asSequence()
             .filter { it.tipo == Movimiento.Tipo.GASTO }
-            .groupBy { it.categoria ?: "otros" }
+            .groupBy { it.categoria ?: "Otros" }
             .map { (categoria, lista) ->
                 categoria to lista.sumOf { it.cantidad }
             }
@@ -40,46 +53,61 @@ fun PantallaCategorias(
 
     ScreenScaffold(
         topBar = {
-            TopAppBar(title = { Text("Categorías de gasto") })
+            TopAppBar(
+                title = { }, // título visual va en el body
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
+                    }
+                }
+            )
         }
-    ) { inner ->
-        Column(
+    ) { padding ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(inner)
+                .padding(padding)
         ) {
-            LazyColumn(
+            Column(
                 modifier = Modifier
-                    .weight(1f)
+                    .align(Alignment.Center)
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
+                    .padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                items(totalesPorCategoria, key = { it.first }) { (categoria, total) ->
-                    ListItem(
-                        headlineContent = { Text(categoria) },
-                        trailingContent = {
-                            Text(
-                                text = formatter.format(total),
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    )
-                    Divider()
-                }
-            }
+                Text(
+                    text = "Categorías de gasto",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            // Barra inferior con botón Atrás
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                OutlinedButton(onClick = onBack) { Text("Atrás") }
+                LazyColumn(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    items(totalesPorCategoria, key = { it.first }) { (categoria, total) ->
+                        ListItem(
+                            headlineContent = { Text(categoria) },
+                            trailingContent = {
+                                Text(
+                                    text = formatter.format(total),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        )
+                        Divider()
+                    }
+                }
             }
         }
     }
 }
+
+
 
 
 

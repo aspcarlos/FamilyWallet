@@ -27,7 +27,7 @@ fun PantallaMoneda(
     ScreenScaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cambiar Moneda") },
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
@@ -36,46 +36,55 @@ fun PantallaMoneda(
             )
         }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text("Moneda actual: ${vm.monedaActual}")
-            Spacer(Modifier.height(24.dp))
-
-            // Selector simple con DropdownMenu
-            Button(onClick = { menuAbierto = true }) {
-                Text("Seleccionar nueva moneda (${seleccion})")
-            }
-            DropdownMenu(
-                expanded = menuAbierto,
-                onDismissRequest = { menuAbierto = false }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                opciones.forEach { code ->
-                    DropdownMenuItem(
-                        text = { Text(code) },
-                        onClick = {
-                            seleccion = code
-                            menuAbierto = false
-                        }
-                    )
+                Text(
+                    text = "Cambiar moneda",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+
+                Text("Moneda actual: ${vm.monedaActual}")
+
+                Button(onClick = { menuAbierto = true }) {
+                    Text("Seleccionar nueva moneda (${seleccion})")
                 }
-            }
+                DropdownMenu(
+                    expanded = menuAbierto,
+                    onDismissRequest = { menuAbierto = false }
+                ) {
+                    opciones.forEach { code ->
+                        DropdownMenuItem(
+                            text = { Text(code) },
+                            onClick = {
+                                seleccion = code
+                                menuAbierto = false
+                            }
+                        )
+                    }
+                }
 
-            Spacer(Modifier.height(24.dp))
-
-            Button(
-                onClick = { onGuardar(seleccion) },
-                enabled = seleccion != vm.monedaActual
-            ) {
-                Text("Guardar cambios")
+                Button(
+                    onClick = { onGuardar(seleccion) },
+                    enabled = seleccion != vm.monedaActual
+                ) {
+                    Text("Guardar cambios")
+                }
             }
         }
     }
 }
+
 
 
 

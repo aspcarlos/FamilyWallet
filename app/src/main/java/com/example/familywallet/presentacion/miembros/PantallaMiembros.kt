@@ -8,7 +8,9 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.datos.modelos.Miembro
 
@@ -29,7 +31,7 @@ fun PantallaMiembros(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Miembros") },
+                title = { /* título visual va en el body */ },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
@@ -38,22 +40,55 @@ fun PantallaMiembros(
             )
         }
     ) { inner ->
-        LazyColumn(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner)
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(miembros, key = { it.id }) { m ->
-                MiembroRow(
-                    item = m,
-                    isOwner = (m.uid == ownerUid),
-                    mostrarExpulsar = esAdmin && m.uid != ownerUid,
-                    expulsando = procesando == m.uid,
-                    onExpulsar = { vm.expulsar(familiaId, m.uid) }
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)              // centra vertical y horizontal
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Título centrado
+                Text(
+                    text = "Miembros",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
                 )
-                Divider()
+
+                if (miembros.isEmpty()) {
+                    // Estado vacío centrado
+                    Text(
+                        text = "No hay miembros.",
+                        textAlign = TextAlign.Center
+                    )
+                } else {
+                    // Lista centrada (con altura limitada para no pegarse al borde)
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 400.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 4.dp)
+                    ) {
+                        items(miembros, key = { it.id }) { m ->
+                            MiembroRow(
+                                item = m,
+                                isOwner = (m.uid == ownerUid),
+                                mostrarExpulsar = esAdmin && m.uid != ownerUid,
+                                expulsando = procesando == m.uid,
+                                onExpulsar = { vm.expulsar(familiaId, m.uid) }
+                            )
+                            Divider()
+                        }
+                    }
+                }
             }
         }
     }
@@ -70,10 +105,14 @@ private fun MiembroRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
+            .padding(vertical = 6.dp, horizontal = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             if (isOwner) {
                 Icon(
                     Icons.Default.EmojiEvents,
@@ -93,5 +132,6 @@ private fun MiembroRow(
         }
     }
 }
+
 
 

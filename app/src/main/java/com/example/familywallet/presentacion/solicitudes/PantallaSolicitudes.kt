@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.datos.modelos.Solicitud
 import com.example.familywallet.presentacion.familia.FamiliaViewModel
@@ -59,7 +60,8 @@ fun PantallaSolicitudes(
     ScreenScaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Solicitudes pendientes") },
+                // Título visual va en el body, aquí lo dejamos vacío
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Filled.ArrowBack, contentDescription = "Atrás")
@@ -74,53 +76,83 @@ fun PantallaSolicitudes(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Estado vacío / error amigable
+
             if (pendientes.isEmpty()) {
+                // Estado vacío: título + mensaje, todo CENTRADO
                 val msg = if (error.isNullOrBlank())
                     "No hay solicitudes."
                 else
                     "No se pudieron cargar las solicitudes.\nDesliza hacia atrás y vuelve a intentarlo."
 
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) { Text(msg) }
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    Text(
+                        text = "Solicitudes pendientes",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = msg,
+                        textAlign = TextAlign.Center
+                    )
+                }
             } else {
+                // Lista + título centrado horizontalmente; todo el bloque centrado verticalmente
                 val itemsUi = remember(pendientes) {
                     pendientes.map { s -> SolicitudUi(id = s.id, alias = s.alias, uid = s.uid) }
                 }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    items(
-                        items = itemsUi,
-                        key = { it.id }
-                    ) { ui ->
-                        val disabled = procesandoId == ui.id
+                    Text(
+                        text = "Solicitudes pendientes",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                        Box {
-                            SolicitudCard(
-                                solicitud = ui,
-                                onAceptar = {
-                                    if (!disabled) {
-                                        val s = pendientes.firstOrNull { it.id == ui.id }
-                                        if (s != null) vm.aceptar(familiaId, s)
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentPadding = PaddingValues(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(
+                            items = itemsUi,
+                            key = { it.id }
+                        ) { ui ->
+                            val disabled = procesandoId == ui.id
+
+                            Box {
+                                SolicitudCard(
+                                    solicitud = ui,
+                                    onAceptar = {
+                                        if (!disabled) {
+                                            val s = pendientes.firstOrNull { it.id == ui.id }
+                                            if (s != null) vm.aceptar(familiaId, s)
+                                        }
+                                    },
+                                    onDenegar = {
+                                        if (!disabled) vm.rechazar(familiaId, ui.id)
                                     }
-                                },
-                                onDenegar = {
-                                    if (!disabled) vm.rechazar(familiaId, ui.id)
-                                }
-                            )
+                                )
 
-                            if (disabled) {
-                                Box(
-                                    Modifier.matchParentSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator()
+                                if (disabled) {
+                                    Box(
+                                        Modifier.matchParentSize(),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator()
+                                    }
                                 }
                             }
                         }
@@ -166,6 +198,7 @@ private fun SolicitudCard(
         }
     }
 }
+
 
 
 
