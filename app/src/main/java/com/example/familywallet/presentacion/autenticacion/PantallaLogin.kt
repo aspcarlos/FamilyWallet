@@ -1,6 +1,8 @@
 package com.example.familywallet.presentacion.autenticacion
 
+import android.annotation.SuppressLint
 import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,12 +18,22 @@ import com.example.familywallet.ui.validarEmail
 
 @Composable
 fun PantallaLogin(
-    vm: AuthViewModel = viewModel(),
+    authVM: AuthViewModel,
     onLoginOk: () -> Unit,
     onRegistro: () -> Unit,
     onOlvido: () -> Unit
 ) {
     val context = LocalContext.current
+
+    // ID único del dispositivo
+    @SuppressLint("HardwareIds")
+    val deviceId = remember {
+        Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ANDROID_ID
+        ) ?: "Unknown"
+    }
+
 
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
@@ -29,14 +41,12 @@ fun PantallaLogin(
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    // NUEVO: flags para no mostrar errores al entrar
     var emailTouched by remember { mutableStateOf(false) }
     var passTouched by remember { mutableStateOf(false) }
 
     val rawEmailError = validarEmail(email)
     val rawPassError  = if (pass.isBlank()) "La contraseña es obligatoria" else null
 
-    // Solo los mostramos si el usuario ha tocado el campo
     val emailErrorToShow = if (emailTouched) rawEmailError else null
     val passErrorToShow  = if (passTouched)  rawPassError  else null
 
@@ -58,7 +68,8 @@ fun PantallaLogin(
             modifier = Modifier.fillMaxWidth()
         ) {
 
-            Text("Iniciar sesión",
+            Text(
+                "Iniciar sesión",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.primary
             )
@@ -104,9 +115,10 @@ fun PantallaLogin(
                 onClick = {
                     loading = true
                     error = null
-                    vm.login(
+                    authVM.login(
                         email = email.trim(),
-                        pass  = pass,
+                        pass = pass,
+                        deviceId = deviceId,
                         onOk = {
                             loading = false
                             onLoginOk()
@@ -120,15 +132,13 @@ fun PantallaLogin(
                 enabled = canSubmit,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (loading) "Entrando..." else "Entrar")
+                Text(text = if (loading) "Entrando..." else "Entrar")
             }
 
-            // Mensaje de error general
             error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
             }
 
-            // CTA específico si falta verificación: abrir app de correo
             if (requiereVerificacion) {
                 OutlinedButton(
                     onClick = {
@@ -153,6 +163,7 @@ fun PantallaLogin(
         }
     }
 }
+
 
 
 

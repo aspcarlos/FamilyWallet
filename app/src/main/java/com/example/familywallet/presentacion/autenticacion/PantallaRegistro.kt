@@ -16,8 +16,8 @@ import com.example.familywallet.ui.validarPassword
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaRegistro(
-    vm: AuthViewModel = viewModel(),
-    onRegistrar: (email: String, pass: String) -> Unit,
+    authVM: AuthViewModel,
+    onRegistroOk: () -> Unit,
     onVolverLogin: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -105,13 +105,13 @@ fun PantallaRegistro(
                     onClick = {
                         if (!validarCampos()) return@Button
                         cargando = true
-                        vm.registrar(
+                        authVM.registrar(
                             email = email.trim(),
                             pass = pass,
                             onOk = {
                                 cargando = false
                                 generalError = null
-                                onRegistrar(email.trim(), pass)
+                                onRegistroOk()
                             },
                             onError = { msg ->
                                 cargando = false

@@ -1,7 +1,9 @@
 package com.example.familywallet.presentacion.autenticacion
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.example.familywallet.datos.repositorios.AuthRepositorio
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
@@ -10,11 +12,12 @@ import com.google.firebase.auth.ktx.auth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
-class AuthViewModel : ViewModel() {
+class AuthViewModel(
+    private val repo: AuthRepositorio
+) : ViewModel() {
 
     private val auth = Firebase.auth
 
-    /** REGISTRO + envío de verificación. Cierra sesión para obligar a verificar. */
     fun registrar(
         email: String,
         pass: String,
@@ -23,13 +26,8 @@ class AuthViewModel : ViewModel() {
     ) = viewModelScope.launch {
         try {
             auth.createUserWithEmailAndPassword(email, pass).await()
-
-            // Enviar correo de verificación
             auth.currentUser?.sendEmailVerification()?.await()
-
-            // Importante: cerrar sesión para que no entre sin verificar
             auth.signOut()
-
             onOk()
         } catch (e: Exception) {
             val msg = when (e) {
@@ -45,54 +43,62 @@ class AuthViewModel : ViewModel() {
         }
     }
 
-    /** LOGIN. Si no está verificado, reenvía verificación y bloquea acceso. */
     fun login(
         email: String,
         pass: String,
+        deviceId: String,
         onOk: () -> Unit,
         onError: (String) -> Unit
     ) = viewModelScope.launch {
         try {
-            auth.signInWithEmailAndPassword(email, pass).await()
-            val user = auth.currentUser
-
-            if (user != null && !user.isEmailVerified) {
-                // reenvía por si no lo recibió
-                user.sendEmailVerification().await()
-                auth.signOut()
-                onError("Debes verificar tu correo. Te hemos enviado un enlace.")
-                return@launch
-            }
-
+            repo.login(email, pass, deviceId)
             onOk()
         } catch (e: Exception) {
-            val msg = when (e) {
-                is FirebaseAuthInvalidCredentialsException ->
-                    "Correo o contraseña incorrectos."
-                else -> e.localizedMessage ?: "Error al iniciar sesión."
+            val msg = when (e.message) {
+                "ACCOUNT_ALREADY_ACTIVE" ->
+                    "Esta cuenta ya está iniciada en otro dispositivo."
+                else -> e.message ?: "Error al iniciar sesión"
             }
             onError(msg)
         }
     }
 
-    /** Reset password (igual que tenías) */
+    fun logout() {
+        viewModelScope.launch {
+            repo.logout()
+        }
+    }
+
     fun enviarResetPassword(
         email: String,
         onOk: () -> Unit,
         onError: (String) -> Unit
     ) = viewModelScope.launch {
         try {
-            auth.sendPasswordResetEmail(email).await()
+            Firebase.auth.sendPasswordResetEmail(email).await()
             onOk()
         } catch (e: Exception) {
             onError(e.localizedMessage ?: "Error enviando correo de restablecimiento.")
         }
     }
+}
 
-    fun logout() {
-        auth.signOut()
+class AuthViewModelFactory(
+    private val repo: AuthRepositorio
+) : ViewModelProvider.Factory {
+
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return AuthViewModel(repo) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
+
+
+
 
 
 

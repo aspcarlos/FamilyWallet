@@ -16,9 +16,9 @@ import com.example.familywallet.ui.validarEmail
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaOlvidoPassword(
-    vm: AuthViewModel = viewModel(),
-    onVolverLogin: () -> Unit = {},
-    onEnviado: () -> Unit = {}
+    authVM: AuthViewModel,
+    onEnviado: () -> Unit,
+    onVolverLogin: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
@@ -72,7 +72,7 @@ fun PantallaOlvidoPassword(
                 Button(
                     onClick = {
                         loading = true
-                        vm.enviarResetPassword(
+                        authVM.enviarResetPassword(
                             email = email.trim(),
                             onOk = {
                                 loading = false

@@ -3,6 +3,7 @@ package com.example.familywallet.datos.repositorios
 import com.google.firebase.firestore.FirebaseFirestore
 
 object ServiceLocator {
+
     private val firestore by lazy { FirebaseFirestore.getInstance() }
 
     // Repos
@@ -18,9 +19,11 @@ object ServiceLocator {
         FirebaseAuthRepositorio()
     }
 
-    val db = FirebaseFirestore.getInstance()
-    val solicitudesRepo: SolicitudesRepositorio = FirebaseSolicitudesRepositorio(db)
+    val solicitudesRepo: SolicitudesRepositorio by lazy {
+        FirebaseSolicitudesRepositorio(db = firestore)
+    }
 }
+
 
 
 

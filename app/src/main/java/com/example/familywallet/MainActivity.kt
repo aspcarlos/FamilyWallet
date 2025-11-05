@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
@@ -15,10 +16,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.familywallet.datos.repositorios.ServiceLocator
 import com.example.familywallet.presentacion.autenticacion.AuthViewModel
+import com.example.familywallet.presentacion.autenticacion.AuthViewModelFactory
 import com.example.familywallet.presentacion.autenticacion.PantallaLogin
 import com.example.familywallet.presentacion.autenticacion.PantallaOlvidoPassword
 import com.example.familywallet.presentacion.autenticacion.PantallaRegistro
@@ -38,7 +39,6 @@ import com.example.familywallet.theme.ThemeVMFactory
 import com.example.familywallet.theme.ThemeViewModel
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
-import androidx.compose.material3.Typography
 
 // ----------------------------
 // Rutas
@@ -69,6 +69,7 @@ sealed class Ruta(val route: String) {
         val routeWithArg = "$route/{$ARG}"
         fun build(familiaId: String) = "$route/$familiaId"
     }
+
     data object Miembros : Ruta("miembros/{familiaId}") {
         const val ARG = "familiaId"
         fun build(familiaId: String) = "miembros/$familiaId"
@@ -80,13 +81,11 @@ private val LightGreenBackground = Color(0xFFE8F5E9)   // verde muy claro
 private val DarkGreenPrimary     = Color(0xFF2E7D32)   // verde más oscuro para texto/botones
 
 private val CustomLightColorScheme = lightColorScheme(
-    // Botones principales
     primary            = DarkGreenPrimary,
-    onPrimary          = Color.White,          // texto de botones
+    onPrimary          = Color.White,
     primaryContainer   = DarkGreenPrimary,
     onPrimaryContainer = Color.White,
 
-    // FilledTonalButton y similares
     secondary              = DarkGreenPrimary,
     onSecondary            = Color.White,
     secondaryContainer     = DarkGreenPrimary,
@@ -97,50 +96,40 @@ private val CustomLightColorScheme = lightColorScheme(
     tertiaryContainer   = DarkGreenPrimary,
     onTertiaryContainer = Color.White,
 
-    // Fondo / tarjetas
     background       = LightGreenBackground,
-    onBackground     = DarkGreenPrimary,       // ⬅ texto en verde oscuro
+    onBackground     = DarkGreenPrimary,
     surface          = LightGreenBackground,
-    onSurface        = DarkGreenPrimary,       // ⬅ texto en verde oscuro
+    onSurface        = DarkGreenPrimary,
     surfaceVariant   = Color(0xFFD0E8D6),
-    onSurfaceVariant = DarkGreenPrimary,       // ⬅ texto secundario en verde oscuro
+    onSurfaceVariant = DarkGreenPrimary,
 
-    // Bordes de OutlinedButton
     outline = DarkGreenPrimary
 )
 
-// === FUENTE PERSONALIZADA PARA TÍTULOS ===
-// Títulos (app bars, headers, etc.)
+// === FUENTES PERSONALIZADAS ===
 private val TitleFontFamily = FontFamily(
     Font(R.font.telma_variable, weight = FontWeight.Normal)
 )
-
-// Botones
 private val ButtonFontFamily = FontFamily(
     Font(R.font.ranade_variable, weight = FontWeight.Normal)
 )
-
-// Resto de textos (body, labels, etc.)
 private val BodyFontFamily = FontFamily(
     Font(R.font.ranade_variable, weight = FontWeight.Normal)
 )
 
 val AppTypography = Typography(
-    // TÍTULOS
     headlineLarge  = Typography().headlineLarge.copy(fontFamily = TitleFontFamily),
     headlineMedium = Typography().headlineMedium.copy(fontFamily = TitleFontFamily),
     headlineSmall  = Typography().headlineSmall.copy(fontFamily = TitleFontFamily),
 
-    titleLarge = Typography().titleLarge.copy(fontFamily = TitleFontFamily),
+    titleLarge  = Typography().titleLarge.copy(fontFamily = TitleFontFamily),
     titleMedium = Typography().titleMedium.copy(fontFamily = TitleFontFamily),
-    titleSmall = Typography().titleSmall.copy(fontFamily = TitleFontFamily),
+    titleSmall  = Typography().titleSmall.copy(fontFamily = TitleFontFamily),
 
-    // BOTONES
     labelLarge  = Typography().labelLarge.copy(fontFamily = ButtonFontFamily),
     labelMedium = Typography().labelMedium.copy(fontFamily = ButtonFontFamily),
     labelSmall  = Typography().labelSmall.copy(fontFamily = ButtonFontFamily),
 
-    // TEXTOS NORMALES
     bodyLarge  = Typography().bodyLarge.copy(fontFamily = BodyFontFamily),
     bodyMedium = Typography().bodyMedium.copy(fontFamily = BodyFontFamily),
     bodySmall  = Typography().bodySmall.copy(fontFamily = BodyFontFamily)
@@ -150,15 +139,10 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // Tema global persistente (DataStore)
             val themeVM: ThemeViewModel = viewModel(factory = ThemeVMFactory(application))
             val isDark by themeVM.isDark.collectAsState()
 
-            val colors = if (isDark) {
-                darkColorScheme()
-            } else {
-                CustomLightColorScheme
-            }
+            val colors = if (isDark) darkColorScheme() else CustomLightColorScheme
 
             MaterialTheme(
                 colorScheme = colors,
@@ -173,25 +157,28 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-
 @Composable
 fun AppNav(
     isDark: Boolean,
     onToggleDark: () -> Unit
 ) {
-    val nav = rememberNavController()
+    val nav = androidx.navigation.compose.rememberNavController()
 
-    // VMs
+    // ===== ViewModels creados UNA sola vez con su factory =====
     val movimientosVM: MovimientosViewModel = viewModel(
         factory = MovimientosVMFactory(ServiceLocator.movimientosRepo)
     )
+
     val familiaVM: FamiliaViewModel = viewModel(
         factory = FamiliaVMFactory(
             familiaRepo = ServiceLocator.familiaRepo,
             authRepo = ServiceLocator.authRepo
         )
     )
-    val authVM: AuthViewModel = viewModel()
+
+    val authVM: AuthViewModel = viewModel(
+        factory = AuthViewModelFactory(ServiceLocator.authRepo)
+    )
 
     // Navegación a ConfigFamilia al ser expulsado
     val goConfigOnKick: () -> Unit = {
@@ -205,7 +192,7 @@ fun AppNav(
         navController = nav,
         startDestination = Ruta.Login.route
     ) {
-        // LOGIN (redirección si ya hay sesión)
+        // LOGIN
         composable(Ruta.Login.route) {
             LaunchedEffect(Unit) {
                 Firebase.auth.currentUser?.let {
@@ -215,7 +202,9 @@ fun AppNav(
                     }
                 }
             }
+
             PantallaLogin(
+                authVM = authVM,
                 onLoginOk = {
                     nav.navigate(Ruta.ConfigFamilia.route) {
                         popUpTo(Ruta.Login.route) { inclusive = true }
@@ -227,9 +216,11 @@ fun AppNav(
             )
         }
 
+        // REGISTRO
         composable(Ruta.Registro.route) {
             PantallaRegistro(
-                onRegistrar = { _, _ ->
+                authVM = authVM,
+                onRegistroOk = {
                     nav.navigate(Ruta.Login.route) {
                         popUpTo(Ruta.Registro.route) { inclusive = true }
                         launchSingleTop = true
@@ -239,16 +230,17 @@ fun AppNav(
             )
         }
 
+        // RECUPERAR PASSWORD
         composable(Ruta.Recuperar.route) {
             PantallaOlvidoPassword(
+                authVM = authVM,
                 onEnviado = { nav.popBackStack() },
                 onVolverLogin = { nav.popBackStack() }
             )
         }
 
-        // Config familia
+        // CONFIG FAMILIA
         composable(Ruta.ConfigFamilia.route) {
-            val authVMLocal: AuthViewModel = viewModel()
             PantallaConfigFamilia(
                 vm = familiaVM,
                 onIrALaFamilia = { familiaId ->
@@ -260,7 +252,7 @@ fun AppNav(
                 onCrear = { nav.navigate(Ruta.CrearFamilia.route) },
                 onUnirse = { nav.navigate(Ruta.UnirseFamilia.route) },
                 onLogout = {
-                    authVMLocal.logout()
+                    authVM.logout()
                     nav.navigate(Ruta.Login.route) {
                         popUpTo(nav.graph.startDestinationId) { inclusive = true }
                         launchSingleTop = true
@@ -282,7 +274,7 @@ fun AppNav(
             )
         }
 
-        composable(route = Ruta.UnirseFamilia.route) {
+        composable(Ruta.UnirseFamilia.route) {
             val soliVM: SolicitudesViewModel = viewModel(
                 factory = SolicitudesVMFactory(
                     solicitudesRepo = ServiceLocator.solicitudesRepo,
@@ -294,11 +286,11 @@ fun AppNav(
             PantallaUnirseFamilia(
                 vm = soliVM,
                 onHecho = { nav.popBackStack() },
-                onAtras = { nav.popBackStack() }
+                onAtras  = { nav.popBackStack() }
             )
         }
 
-        // Configuración
+        // CONFIGURACIÓN
         composable(Ruta.Configuracion.route) {
             PantallaConfiguracion(
                 isDark = isDark,
@@ -314,7 +306,7 @@ fun AppNav(
             )
         }
 
-        composable(route = Ruta.Moneda.route) {
+        composable(Ruta.Moneda.route) {
             PantallaMoneda(
                 vm = movimientosVM,
                 onGuardar = { nueva ->
@@ -325,7 +317,6 @@ fun AppNav(
             )
         }
 
-        // Categorías
         composable(Ruta.Categorias.route) {
             PantallaCategorias(
                 vm = movimientosVM,
@@ -333,10 +324,10 @@ fun AppNav(
             )
         }
 
-        // Lista de Miembros
+        // MIEMBROS
         composable(
             route = Ruta.Miembros.route,
-            arguments = listOf(navArgument(Ruta.Miembros.ARG){ type = NavType.StringType })
+            arguments = listOf(navArgument(Ruta.Miembros.ARG) { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString(Ruta.Miembros.ARG) ?: return@composable
             val vmMiembros: MiembrosViewModel = viewModel(
@@ -344,6 +335,7 @@ fun AppNav(
                     familiaRepo = ServiceLocator.familiaRepo
                 )
             )
+
             var esAdmin by remember { mutableStateOf(false) }
             LaunchedEffect(familiaId) {
                 val uid = ServiceLocator.authRepo.usuarioActualUid
@@ -358,10 +350,10 @@ fun AppNav(
             )
         }
 
-        // Inicio
+        // INICIO
         composable(
             route = Ruta.Inicio.route,
-            arguments = listOf(navArgument("familiaId"){ type = NavType.StringType })
+            arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString("familiaId") ?: return@composable
 
@@ -396,7 +388,7 @@ fun AppNav(
             )
         }
 
-        // Gasto
+        // ADD GASTO
         composable(
             route = Ruta.AddGasto.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
@@ -412,7 +404,7 @@ fun AppNav(
             )
         }
 
-        // Ingreso
+        // ADD INGRESO
         composable(
             route = Ruta.AddIngreso.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
@@ -428,7 +420,7 @@ fun AppNav(
             )
         }
 
-        // Historial (lista de meses)
+        // HISTORIAL (lista meses)
         composable(
             route = Ruta.Historial.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
@@ -445,7 +437,7 @@ fun AppNav(
             )
         }
 
-        // Historial del mes
+        // HISTORIAL MES
         composable(
             route = Ruta.HistorialMes.route,
             arguments = listOf(
@@ -470,7 +462,7 @@ fun AppNav(
             )
         }
 
-        // Solicitudes (admin)
+        // SOLICITUDES
         composable(
             route = Ruta.Solicitudes.routeWithArg,
             arguments = listOf(navArgument(Ruta.Solicitudes.ARG) { type = NavType.StringType })
@@ -495,6 +487,7 @@ fun AppNav(
         }
     }
 }
+
 
 
 
