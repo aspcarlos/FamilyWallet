@@ -1,35 +1,27 @@
 package com.example.familywallet.presentacion.inicio
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.datos.modelos.Movimiento
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
 import com.example.familywallet.presentacion.ui.ScreenScaffold
 import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
+
+private data class CategoriaResumen(
+    val nombreCompleto: String,
+    val total: Double,
+    val ultimaFecha: Long
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,21 +32,27 @@ fun PantallaCategorias(
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
     val items by vm.itemsDelMesState
 
+    // Agrupamos igual que antes, pero ahora calculamos también la fecha más reciente
     val totalesPorCategoria = remember(items) {
         items
             .asSequence()
             .filter { it.tipo == Movimiento.Tipo.GASTO }
             .groupBy { it.categoria ?: "Otros" }
-            .map { (categoria, lista) ->
-                categoria to lista.sumOf { it.cantidad }
+            .map { (categoriaCompleta, lista) ->
+                CategoriaResumen(
+                    nombreCompleto = categoriaCompleta,
+                    total = lista.sumOf { it.cantidad },
+                    ultimaFecha = lista.maxOfOrNull { it.fechaMillis } ?: 0L
+                )
             }
-            .sortedBy { it.first }
+            // 👇 Orden: categoría cuyo gasto sea más reciente, primero
+            .sortedByDescending { it.ultimaFecha }
     }
 
     ScreenScaffold(
         topBar = {
             TopAppBar(
-                title = { }, // título visual va en el body
+                title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
@@ -62,39 +60,48 @@ fun PantallaCategorias(
                 }
             )
         }
-    ) { padding ->
-        Box(
+    ) { inner ->
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(inner)
         ) {
-            Column(
+            Box(
                 modifier = Modifier
-                    .align(Alignment.Center)
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                    .padding(top = 32.dp, bottom = 16.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "Categorías de gasto",
                     style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
+                    color = MaterialTheme.colorScheme.primary
                 )
+            }
 
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+            if (totalesPorCategoria.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    items(totalesPorCategoria, key = { it.first }) { (categoria, total) ->
+                    Text("No hay gastos en este periodo.")
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    items(totalesPorCategoria, key = { it.nombreCompleto }) { cat ->
+                        val nombreVisible = cat.nombreCompleto
+                            .substringBefore(" · ")
+                            .ifBlank { "Otros" }
+
                         ListItem(
-                            headlineContent = { Text(categoria) },
+                            headlineContent = { Text(nombreVisible) },
                             trailingContent = {
                                 Text(
-                                    text = formatter.format(total),
+                                    text = formatter.format(cat.total),
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -106,6 +113,12 @@ fun PantallaCategorias(
         }
     }
 }
+
+
+
+
+
+
 
 
 
