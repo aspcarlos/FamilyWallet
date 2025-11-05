@@ -3,6 +3,9 @@ package com.example.familywallet.datos.repositorios
 import com.example.familywallet.datos.modelos.Movimiento
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class FirebaseMovimientoRepositorio(private val db: FirebaseFirestore) : MovimientoRepositorio {
@@ -56,7 +59,7 @@ class FirebaseMovimientoRepositorio(private val db: FirebaseFirestore) : Movimie
             }
         } catch (e: com.google.firebase.firestore.FirebaseFirestoreException) {
             if (e.code == com.google.firebase.firestore.FirebaseFirestoreException.Code.FAILED_PRECONDITION) {
-                // ⚠️ Índice en construcción → fallback temporal (menos eficiente)
+                // Índice en construcción → fallback temporal (menos eficiente)
                 val snap = movimientosCol
                     .whereEqualTo("familiaId", familiaId)
                     .get()
@@ -99,6 +102,26 @@ class FirebaseMovimientoRepositorio(private val db: FirebaseFirestore) : Movimie
     override suspend fun eliminarMovimiento(familiaId: String, id: String) {
         // familiaId no es necesario para borrar, pero mantenemos la firma de la interfaz
         movimientosCol.document(id).delete().await()
+    }
+
+    override fun observarMovimientosFamilia(
+        familiaId: String
+    ): Flow<List<Movimiento>> = callbackFlow {
+        val ref = db.collection("familias")
+            .document(familiaId)
+            .collection("movimientos")
+
+        val listener = ref.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+
+            val lista = snapshot?.toObjects(Movimiento::class.java) ?: emptyList()
+            trySend(lista)
+        }
+
+        awaitClose { listener.remove() }
     }
 }
 

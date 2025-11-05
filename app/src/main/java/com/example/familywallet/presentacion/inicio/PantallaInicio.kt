@@ -84,8 +84,14 @@ fun PantallaInicio(
         onExpulsado = onExpulsado
     )
 
-    // Cargar mes actual
-    LaunchedEffect(familiaId) { vm.cargarMesActual(familiaId) }
+    val locale = Locale("es", "ES")
+
+    // ESCUCHA EN TIEMPO REAL de los movimientos de la familia
+    LaunchedEffect(key1 = familiaId) {
+        vm.iniciarEscuchaTiempoReal(familiaId)
+        vm.aplicarRango(familiaId, rangoMesActual(locale))
+    }
+
 
     // Nombre de la familia
     var nombreFamilia by remember(familiaId) { mutableStateOf<String?>(null) }
@@ -100,7 +106,6 @@ fun PantallaInicio(
     val ingresos  = vm.totalIngresos
     val gastos    = vm.totalGastos
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
-    val locale    = Locale("es", "ES")
 
     var menuPeriodoAbierto  by remember { mutableStateOf(false) }
     var menuOpcionesAbierto by remember { mutableStateOf(false) }
@@ -280,6 +285,7 @@ fun PantallaInicio(
         }
     }
 }
+
 
 
 

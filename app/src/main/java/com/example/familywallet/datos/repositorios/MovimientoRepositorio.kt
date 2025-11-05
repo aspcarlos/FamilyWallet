@@ -1,6 +1,7 @@
 package com.example.familywallet.datos.repositorios
 
 import com.example.familywallet.datos.modelos.Movimiento
+import kotlinx.coroutines.flow.Flow
 
 interface MovimientoRepositorio {
     suspend fun movimientosDeMes(familiaId: String, year: Int, month: Int): List<Movimiento>
@@ -11,5 +12,10 @@ interface MovimientoRepositorio {
         inicioMillis: Long,
         finMillis: Long
     ): List<Movimiento>
+
+    // flujo en tiempo real de todos los movimientos de la familia
+    fun observarMovimientosFamilia(familiaId: String): Flow<List<Movimiento>>
 }
+
+
 
