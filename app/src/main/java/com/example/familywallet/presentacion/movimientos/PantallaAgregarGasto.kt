@@ -43,7 +43,6 @@ fun PantallaAgregarGasto(
         .coerceAtLeast(0)
 
     Scaffold(
-        // dejamos el título dentro del contenido para centrarlo
         bottomBar = {
             Row(
                 Modifier
@@ -51,7 +50,7 @@ fun PantallaAgregarGasto(
                     .padding(16.dp),
                 horizontalArrangement = Arrangement.Start
             ) {
-                OutlinedButton(onClick = onBack) { Text("Atrás") }
+                Button(onClick = onBack) { Text("Atrás") }
             }
         }
     ) { inner ->
@@ -62,15 +61,13 @@ fun PantallaAgregarGasto(
                 .padding(inner)
                 .padding(horizontal = 24.dp)
         ) {
-            // Bloque centrado vertical y horizontalmente
             Column(
                 modifier = Modifier
-                    .align(Alignment.Center)     // << centrado total del bloque
+                    .align(Alignment.Center)
                     .fillMaxWidth(0.9f),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // Título centrado en el espacio superior del bloque
                 Text(
                     "Nuevo gasto",
                     style = MaterialTheme.typography.headlineSmall,
@@ -102,7 +99,8 @@ fun PantallaAgregarGasto(
                     )
                     ExposedDropdownMenu(
                         expanded = expanded,
-                        onDismissRequest = { expanded = false }
+                        onDismissRequest = { expanded = false },
+                        containerColor = MaterialTheme.colorScheme.surface
                     ) {
                         CATEGORIAS_GASTO.forEach { c ->
                             DropdownMenuItem(
@@ -132,7 +130,8 @@ fun PantallaAgregarGasto(
                             else -> {
                                 error = null
                                 val fecha = System.currentTimeMillis()
-                                val catFinal = if (nota.isBlank()) categoria!! else "${categoria!!} · ${nota.trim()}"
+                                val catFinal =
+                                    if (nota.isBlank()) categoria!! else "${categoria!!} · ${nota.trim()}"
                                 scope.launch {
                                     vm.agregarGasto(
                                         familiaId = familiaId,
@@ -153,6 +152,7 @@ fun PantallaAgregarGasto(
         }
     }
 }
+
 
 
 

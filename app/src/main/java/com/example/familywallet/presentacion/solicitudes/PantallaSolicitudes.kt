@@ -177,27 +177,44 @@ private fun SolicitudCard(
     onAceptar: () -> Unit,
     onDenegar: () -> Unit
 ) {
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
                 text = "El usuario con el alias \"${solicitud.alias}\" quiere unirse a tu familia.",
                 style = MaterialTheme.typography.bodyLarge
             )
+
             Row(
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Button(onClick = onAceptar) { Text("Aceptar") }
-                OutlinedButton(onClick = onDenegar) { Text("Denegar") }
+                Button(
+                    onClick = onAceptar,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Aceptar")
+                }
+                Button(
+                    onClick = onDenegar,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("Denegar")
+                }
             }
         }
     }
 }
+
 
 
 
