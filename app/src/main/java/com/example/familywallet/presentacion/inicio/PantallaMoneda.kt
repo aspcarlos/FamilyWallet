@@ -36,50 +36,47 @@ fun PantallaMoneda(
             )
         }
     ) { padding ->
-        Box(
+        Column(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+            Text(
+                text = "Cambiar moneda",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Text("Moneda actual: ${vm.monedaActual}")
+
+            Button(onClick = { menuAbierto = true }) {
+                Text("Seleccionar nueva moneda (${seleccion})")
+            }
+
+            DropdownMenu(
+                expanded = menuAbierto,
+                onDismissRequest = { menuAbierto = false },
+                containerColor = MaterialTheme.colorScheme.background
             ) {
-                Text(
-                    text = "Cambiar moneda",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
-
-                Text("Moneda actual: ${vm.monedaActual}")
-
-                Button(onClick = { menuAbierto = true }) {
-                    Text("Seleccionar nueva moneda (${seleccion})")
+                opciones.forEach { code ->
+                    DropdownMenuItem(
+                        text = { Text(code) },
+                        onClick = {
+                            seleccion = code
+                            menuAbierto = false
+                        }
+                    )
                 }
-                DropdownMenu(
-                    expanded = menuAbierto,
-                    onDismissRequest = { menuAbierto = false }
-                ) {
-                    opciones.forEach { code ->
-                        DropdownMenuItem(
-                            text = { Text(code) },
-                            onClick = {
-                                seleccion = code
-                                menuAbierto = false
-                            }
-                        )
-                    }
-                }
+            }
 
-                Button(
-                    onClick = { onGuardar(seleccion) },
-                    enabled = seleccion != vm.monedaActual
-                ) {
-                    Text("Guardar cambios")
-                }
+            Button(
+                onClick = { onGuardar(seleccion) },
+                enabled = seleccion != vm.monedaActual
+            ) {
+                Text("Guardar cambios")
             }
         }
     }
