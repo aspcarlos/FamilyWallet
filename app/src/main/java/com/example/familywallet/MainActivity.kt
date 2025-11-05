@@ -8,6 +8,9 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -35,6 +38,7 @@ import com.example.familywallet.theme.ThemeVMFactory
 import com.example.familywallet.theme.ThemeViewModel
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import androidx.compose.material3.Typography
 
 // ----------------------------
 // Rutas
@@ -105,6 +109,42 @@ private val CustomLightColorScheme = lightColorScheme(
     outline = DarkGreenPrimary
 )
 
+// === FUENTE PERSONALIZADA PARA TÍTULOS ===
+// Títulos (app bars, headers, etc.)
+private val TitleFontFamily = FontFamily(
+    Font(R.font.telma_variable, weight = FontWeight.Normal)
+)
+
+// Botones
+private val ButtonFontFamily = FontFamily(
+    Font(R.font.ranade_variable, weight = FontWeight.Normal)
+)
+
+// Resto de textos (body, labels, etc.)
+private val BodyFontFamily = FontFamily(
+    Font(R.font.ranade_variable, weight = FontWeight.Normal)
+)
+
+val AppTypography = Typography(
+    // TÍTULOS
+    headlineLarge  = Typography().headlineLarge.copy(fontFamily = TitleFontFamily),
+    headlineMedium = Typography().headlineMedium.copy(fontFamily = TitleFontFamily),
+    headlineSmall  = Typography().headlineSmall.copy(fontFamily = TitleFontFamily),
+
+    titleLarge = Typography().titleLarge.copy(fontFamily = TitleFontFamily),
+    titleMedium = Typography().titleMedium.copy(fontFamily = TitleFontFamily),
+    titleSmall = Typography().titleSmall.copy(fontFamily = TitleFontFamily),
+
+    // BOTONES
+    labelLarge  = Typography().labelLarge.copy(fontFamily = ButtonFontFamily),
+    labelMedium = Typography().labelMedium.copy(fontFamily = ButtonFontFamily),
+    labelSmall  = Typography().labelSmall.copy(fontFamily = ButtonFontFamily),
+
+    // TEXTOS NORMALES
+    bodyLarge  = Typography().bodyLarge.copy(fontFamily = BodyFontFamily),
+    bodyMedium = Typography().bodyMedium.copy(fontFamily = BodyFontFamily),
+    bodySmall  = Typography().bodySmall.copy(fontFamily = BodyFontFamily)
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -114,14 +154,16 @@ class MainActivity : ComponentActivity() {
             val themeVM: ThemeViewModel = viewModel(factory = ThemeVMFactory(application))
             val isDark by themeVM.isDark.collectAsState()
 
-            // si está en claro, aplicas el esquema verde
             val colors = if (isDark) {
                 darkColorScheme()
             } else {
                 CustomLightColorScheme
             }
 
-            MaterialTheme(colorScheme = colors) {
+            MaterialTheme(
+                colorScheme = colors,
+                typography = AppTypography
+            ) {
                 AppNav(
                     isDark = isDark,
                     onToggleDark = { themeVM.toggle() }
@@ -130,6 +172,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 
 @Composable
 fun AppNav(
