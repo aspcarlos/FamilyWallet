@@ -174,6 +174,7 @@ class MovimientosViewModel(
         familiaId: String,
         cantidad: Double,
         categoria: String?,
+        nota: String? = null,
         fechaMillis: Long
     ) {
         repo.agregarMovimiento(
@@ -182,6 +183,7 @@ class MovimientosViewModel(
                 familiaId = familiaId,
                 cantidad = cantidad,
                 categoria = categoria,
+                nota = nota,
                 fechaMillis = fechaMillis,
                 tipo = Movimiento.Tipo.GASTO
             )
@@ -193,6 +195,7 @@ class MovimientosViewModel(
         familiaId: String,
         cantidad: Double,
         categoria: String?,
+        nota: String? = null,
         fechaMillis: Long
     ) {
         repo.agregarMovimiento(
@@ -201,12 +204,14 @@ class MovimientosViewModel(
                 familiaId = familiaId,
                 cantidad = cantidad,
                 categoria = categoria,
+                nota = nota,
                 fechaMillis = fechaMillis,
                 tipo = Movimiento.Tipo.INGRESO
             )
         )
         recargarDespuesDeInsert(familiaId)
     }
+
 
     private fun recargarDespuesDeInsert(familiaId: String) {
         val r = ultimoRango

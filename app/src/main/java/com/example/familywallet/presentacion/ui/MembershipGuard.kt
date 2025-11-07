@@ -7,18 +7,17 @@ import com.example.familywallet.presentacion.familia.FamiliaViewModel
 fun MembershipGuard(
     familiaIdActual: String,
     familiaVM: FamiliaViewModel,
-    onExpulsado: () -> Unit,      // navega a PantallaConfigFamilia
+    onExpulsado: () -> Unit,
 ) {
-    // Asegura que siempre estamos observando pertenencia
-    LaunchedEffect(Unit) { familiaVM.observarMiFamilia() }
-
+    // El ViewModel ya está observando mi familia en el init.
     val miFamiliaId by familiaVM.miFamiliaId.collectAsState(initial = null)
 
     // Si ya no pertenece (o pasa a null), navega fuera
-    LaunchedEffect(miFamiliaId) {
+    LaunchedEffect(key1 = miFamiliaId) {
         val fuera = miFamiliaId == null || miFamiliaId != familiaIdActual
         if (fuera) onExpulsado()
     }
 }
+
 
 

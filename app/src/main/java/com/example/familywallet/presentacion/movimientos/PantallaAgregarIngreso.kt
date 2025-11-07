@@ -1,15 +1,19 @@
 package com.example.familywallet.presentacion.movimientos
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import com.example.familywallet.presentacion.ui.MembershipGuard
 import kotlinx.coroutines.launch
+import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -18,104 +22,196 @@ fun PantallaAgregarIngreso(
     vm: MovimientosViewModel,
     familiaVM: FamiliaViewModel,
     onGuardado: () -> Unit,
-    onExpulsado: () -> Unit,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit,
+    onExpulsado: () -> Unit
 ) {
-    // Bloquea acceso si fue expulsado en caliente
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
         onExpulsado = onExpulsado
     )
 
-    var cantidadText by remember { mutableStateOf("") }
-    var nota by remember { mutableStateOf("") }
-    var error by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
-    // Límite 25 palabras
-    fun limitTo25Words(input: String): String {
-        val words = input.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-        return if (words.size <= 25) input else words.take(25).joinToString(" ")
-    }
-    val remaining = (25 - nota.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.size)
-        .coerceAtLeast(0)
+    var cantidadTxt by remember { mutableStateOf("") }
+    var categoriaTxt by remember { mutableStateOf("") }
+    var notaTxt      by remember { mutableStateOf("") }
 
-    Scaffold(
-        bottomBar = {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.Start
-            ) { OutlinedButton(onClick = onBack) { Text("Atrás") } }
+    var cantidadError  by remember { mutableStateOf<String?>(null) }
+    var categoriaError by remember { mutableStateOf<String?>(null) }
+    var generalError   by remember { mutableStateOf<String?>(null) }
+    var cargando       by remember { mutableStateOf(false) }
+
+    val categoriasSugeridas = listOf(
+        "Nómina",
+        "Venta",
+        "Regalo",
+        "Devolución",
+        "Otros"
+    )
+
+    fun validar(): Boolean {
+        var ok = true
+        cantidadError = null
+        categoriaError = null
+        generalError = null
+
+        val valor = cantidadTxt.replace(",", ".").toDoubleOrNull()
+        if (valor == null || valor <= 0.0) {
+            cantidadError = "Introduce una cantidad válida"
+            ok = false
         }
-    ) { inner ->
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(inner)
-                .padding(horizontal = 24.dp)
+        if (categoriaTxt.isBlank()) {
+            categoriaError = "La categoría es obligatoria"
+            ok = false
+        }
+        return ok
+    }
+
+    val puedeGuardar = !cargando &&
+            cantidadTxt.isNotBlank() &&
+            categoriaTxt.isNotBlank()
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        IconButton(
+            onClick = onBack,
+            modifier = Modifier.align(Alignment.TopStart)
         ) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.Center)   // centra TODO el bloque
-                    .fillMaxWidth(0.9f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+        }
+
+        Column(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(0.9f),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Añadir ingreso", style = MaterialTheme.typography.headlineSmall)
+
+            // CANTIDAD
+            OutlinedTextField(
+                value = cantidadTxt,
+                onValueChange = {
+                    cantidadTxt = it
+                    if (cantidadError != null) cantidadError = null
+                },
+                label = { Text("Cantidad") },
+                modifier = Modifier.fillMaxWidth(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = cantidadError != null,
+                supportingText = {
+                    cantidadError?.let { msg ->
+                        Text(msg, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            )
+
+            // CATEGORÍA (DESPLEGABLE)
+            var expanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
             ) {
-                Text(
-                    "Nuevo ingreso",
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
-
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
                 OutlinedTextField(
-                    value = cantidadText,
-                    onValueChange = { cantidadText = it },
-                    label = { Text("Cantidad") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                OutlinedTextField(
-                    value = nota,
-                    onValueChange = { nota = limitTo25Words(it) },
-                    label = { Text("Nota (opcional)") },
-                    supportingText = { Text("Máx. 25 palabras • Restantes: $remaining") },
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Button(
-                    onClick = {
-                        val cantidad = cantidadText.replace(',', '.').toDoubleOrNull()
-                        when {
-                            cantidad == null || cantidad <= 0.0 ->
-                                error = "Introduce una cantidad válida"
-                            else -> {
-                                error = null
-                                val fecha = System.currentTimeMillis()
-                                scope.launch {
-                                    vm.agregarIngreso(
-                                        familiaId = familiaId,
-                                        cantidad = cantidad,
-                                        categoria = if (nota.isBlank()) null else nota.trim(),
-                                        fechaMillis = fecha
-                                    )
-                                    onGuardado()
-                                }
-                            }
-                        }
+                    value = categoriaTxt,
+                    onValueChange = {
+                        categoriaTxt = it
+                        if (categoriaError != null) categoriaError = null
                     },
+                    label = { Text("Categoría") },
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) { Text("Guardar ingreso") }
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+                    isError = categoriaError != null,
+                    singleLine = true,
+                    supportingText = {
+                        categoriaError?.let { msg ->
+                            Text(msg, color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    containerColor = MaterialTheme.colorScheme.background
+                ) {
+                    categoriasSugeridas.forEach { cat ->
+                        DropdownMenuItem(
+                            text = { Text(cat) },
+                            onClick = {
+                                categoriaTxt = cat
+                                categoriaError = null
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // NOTA (OPCIONAL)
+            OutlinedTextField(
+                value = notaTxt,
+                onValueChange = { notaTxt = it },
+                label = { Text("Nota (opcional)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = false,
+                maxLines = 3
+            )
+
+            generalError?.let {
+                Text(
+                    text = it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Button(
+                onClick = {
+                    if (!validar()) return@Button
+
+                    val cantidad = cantidadTxt.replace(",", ".").toDouble()
+                    val categoria = categoriaTxt.trim()
+                    val nota = notaTxt.trim().ifBlank { null }
+                    val fecha = Calendar.getInstance().timeInMillis
+
+                    cargando = true
+                    scope.launch {
+                        try {
+                            vm.agregarIngreso(
+                                familiaId = familiaId,
+                                cantidad = cantidad,
+                                categoria = categoria,
+                                nota = nota,
+                                fechaMillis = fecha
+                            )
+                            cargando = false
+                            onGuardado()
+                        } catch (e: Exception) {
+                            cargando = false
+                            generalError = e.message ?: "No se pudo guardar el ingreso."
+                        }
+                    }
+                },
+                enabled = puedeGuardar,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+            ) {
+                Text(if (cargando) "Guardando..." else "Guardar ingreso")
             }
         }
     }
 }
+
 
 
 

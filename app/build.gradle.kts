@@ -77,6 +77,7 @@ dependencies {
     implementation(libs.foundation)
     implementation(libs.androidx.ui.text)
     implementation(libs.androidx.benchmark.traceprocessor)
+    implementation(libs.androidx.compose.foundation.foundation)
 
     // Tests
     testImplementation(libs.junit)

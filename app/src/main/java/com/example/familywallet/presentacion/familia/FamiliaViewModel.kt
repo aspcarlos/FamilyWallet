@@ -8,10 +8,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.launchIn
 
 class FamiliaViewModel(
     private val familiaRepo: FamiliaRepositorio,
@@ -26,21 +26,31 @@ class FamiliaViewModel(
     private val _cargando = MutableStateFlow(false)
     val cargando: StateFlow<Boolean> = _cargando
 
-    init {
-        authRepo.usuarioActualUid?.let { uid ->
-            familiaRepo.observarMiFamiliaId(uid)
-                .onEach { _miFamiliaId.value = it }
-                .launchIn(viewModelScope)
-        }
+    /**
+     * Empieza (sólo una vez) a escuchar en tiempo real el id de mi familia.
+     * Se llama desde PantallaConfigFamilia y desde MembershipGuard.
+     */
+    fun observarMiFamilia() {
+        val uid = authRepo.usuarioActualUid ?: return
+
+        // Ya hay un listener activo → no lo duplicamos
+        if (observeJob != null) return
+
+        observeJob = familiaRepo
+            .observarMiFamiliaId(uid)
+            .onEach { id -> _miFamiliaId.value = id }
+            .launchIn(viewModelScope)
     }
 
-    fun salirDeFamilia() = viewModelScope.launch {
-        val uid = authRepo.usuarioActualUid ?: return@launch
-        val familiaId = _miFamiliaId.value ?: return@launch
+    // salir de la familia (para miembros no admin)
+    suspend fun salirDeMiFamilia() {
+        val uid = authRepo.usuarioActualUid ?: return
+        val familiaId = _miFamiliaId.value ?: return
+
         _cargando.value = true
         try {
-            familiaRepo.salirDeFamilia(uid, familiaId)
-            // el observer actualizará miFamiliaId → null
+            familiaRepo.salirDeFamilia(familiaId, uid)
+            // observarMiFamiliaId pondrá miFamiliaId = null automáticamente
         } finally {
             _cargando.value = false
         }
@@ -56,34 +66,18 @@ class FamiliaViewModel(
         }
     }
 
-    /** Observación en tiempo real del id de mi familia (owner o miembro). */
-    fun observarMiFamilia() {
-        val uid = authRepo.usuarioActualUid ?: return
-        observeJob?.cancel()
-        observeJob = familiaRepo
-            .observarMiFamiliaId(uid)
-            .onEach { id -> _miFamiliaId.value = id }
-            .launchIn(viewModelScope)
-    }
+    /** Crea la familia y devuelve el id del documento creado. */
+    suspend fun crearFamilia(nombre: String, aliasOwner: String): String =
+        withContext(Dispatchers.IO) {
+            val ownerUid = authRepo.usuarioActualUid
+                ?: throw IllegalStateException("Usuario no autenticado")
 
-    override fun onCleared() {
-        observeJob?.cancel()
-        super.onCleared()
-    }
-
-    /**
-     * Crea la familia y devuelve el id del documento creado.
-     */
-    suspend fun crearFamilia(nombre: String, aliasOwner: String): String = withContext(Dispatchers.IO) {
-        val ownerUid = authRepo.usuarioActualUid
-            ?: throw IllegalStateException("Usuario no autenticado")
-        // Llama al repositorio real de Firestore
-        familiaRepo.crearFamilia(
-            nombre = nombre,
-            ownerUid = ownerUid,
-            aliasOwner = aliasOwner
-        )
-    }
+            familiaRepo.crearFamilia(
+                nombre = nombre,
+                ownerUid = ownerUid,
+                aliasOwner = aliasOwner
+            )
+        }
 
     fun eliminarMiFamiliaCascade() {
         val id = _miFamiliaId.value ?: return
@@ -91,14 +85,21 @@ class FamiliaViewModel(
             _cargando.value = true
             try {
                 familiaRepo.eliminarFamilia(id)
-                _miFamiliaId.value = null    // -> PantallaConfigFamilia pasa a “Crear / Unirse”
+                _miFamiliaId.value = null
             } finally {
                 _cargando.value = false
             }
         }
     }
 
+    override fun onCleared() {
+        observeJob?.cancel()
+        super.onCleared()
+    }
 }
+
+
+
 
 
 

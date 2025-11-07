@@ -31,7 +31,8 @@ roomKtx = "2.8.2"
 material3Version = "1.4.0"
 foundationVersion = "1.9.3"
 uiText = "1.9.4"
-benchmarkTraceprocessor = "1.4.1"   # estable
+benchmarkTraceprocessor = "1.4.1"
+androidxFoundation = "1.9.4"   # estable
 
 [libraries]
 accompanist-systemuicontroller = { module = "com.google.accompanist:accompanist-systemuicontroller", version.ref = "accompanistSystemuicontroller" }
@@ -81,6 +82,7 @@ material3 = { group = "androidx.compose.material3", name = "material3", version.
 foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "foundationVersion" }
 androidx-ui-text = { group = "androidx.compose.ui", name = "ui-text", version.ref = "uiText" }
 androidx-benchmark-traceprocessor = { group = "androidx.benchmark", name = "benchmark-traceprocessor", version.ref = "benchmarkTraceprocessor" }
+androidx-compose-foundation-foundation = { group = "androidx.compose.foundation", name = "foundation", version.ref = "androidxFoundation" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
