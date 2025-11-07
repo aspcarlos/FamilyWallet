@@ -19,13 +19,18 @@ fun PantallaConfigFamilia(
     onLogout: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
+
+    // Estados que vienen del ViewModel
     val miFamiliaId by vm.miFamiliaId.collectAsState(initial = null)
     val cargando   by vm.cargando.collectAsState(initial = false)
 
     var mostrarConfirmacion by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(Unit) { vm.observarMiFamilia() }
+    // Empezar a observar la familia solo una vez
+    LaunchedEffect(Unit) {
+        vm.observarMiFamilia()
+    }
 
     Scaffold { inner ->
         Box(
@@ -47,50 +52,55 @@ fun PantallaConfigFamilia(
                     textAlign = TextAlign.Center
                 )
 
+                Spacer(Modifier.height(8.dp))
+
                 if (miFamiliaId.isNullOrEmpty()) {
-                    if (cargando) {
-                        CircularProgressIndicator()
-                    } else {
-                        Spacer(Modifier.height(8.dp))
+                    // Usuario sin familia
+                    Button(
+                        onClick = onCrear,
+                        enabled = !cargando,
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    ) {
+                        Text("Crear familia")
+                    }
 
-                        // VERDE
-                        Button(
-                            onClick = onCrear,
-                            modifier = Modifier.fillMaxWidth(0.8f)
-                        ) { Text("Crear familia") }
-
-                        // VERDE
-                        Button(
-                            onClick = onUnirse,
-                            modifier = Modifier.fillMaxWidth(0.8f)
-                        ) { Text("Unirse a familia") }
+                    Button(
+                        onClick = onUnirse,
+                        enabled = !cargando,
+                        modifier = Modifier.fillMaxWidth(0.8f)
+                    ) {
+                        Text("Unirse a familia")
                     }
                 } else {
-                    // VERDE
+                    // Usuario ya tiene familia
                     Button(
                         onClick = { miFamiliaId?.let(onIrALaFamilia) },
                         enabled = !cargando,
                         modifier = Modifier.fillMaxWidth(0.8f)
-                    ) { Text("Ir a mi familia") }
+                    ) {
+                        Text("Ir a mi familia")
+                    }
 
-                    // VERDE
                     Button(
                         onClick = { mostrarConfirmacion = true },
                         enabled = !cargando,
                         modifier = Modifier.fillMaxWidth(0.8f)
-                    ) { Text("Eliminar familia") }
+                    ) {
+                        Text("Eliminar familia")
+                    }
                 }
 
                 error?.let {
                     Text(
                         text = it,
                         color = MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
                     )
                 }
             }
 
-            // VERDE
+            // Cerrar sesión siempre visible abajo
             Button(
                 onClick = onLogout,
                 enabled = !cargando,
@@ -102,6 +112,7 @@ fun PantallaConfigFamilia(
                 Text("Cerrar sesión")
             }
 
+            // Overlay de carga centrado (no bloquea lógica, solo indica)
             if (cargando) {
                 Box(
                     modifier = Modifier
@@ -113,6 +124,7 @@ fun PantallaConfigFamilia(
                 }
             }
 
+            // Diálogo de confirmación para eliminar familia
             if (mostrarConfirmacion) {
                 AlertDialog(
                     onDismissRequest = { mostrarConfirmacion = false },
@@ -144,6 +156,7 @@ fun PantallaConfigFamilia(
         }
     }
 }
+
 
 
 

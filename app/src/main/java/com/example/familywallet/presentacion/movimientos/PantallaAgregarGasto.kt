@@ -5,9 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.familywallet.datos.modelos.CATEGORIAS_GASTO
 import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import com.example.familywallet.presentacion.ui.MembershipGuard
 import kotlinx.coroutines.launch
@@ -19,139 +17,110 @@ fun PantallaAgregarGasto(
     vm: MovimientosViewModel,
     familiaVM: FamiliaViewModel,
     onGuardado: () -> Unit,
-    onExpulsado: () -> Unit,
-    onBack: () -> Unit = {}
+    onBack: () -> Unit,
+    onExpulsado: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+
+    // protección de expulsión
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
         onExpulsado = onExpulsado
     )
 
-    var cantidadText by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf<String?>(null) }
-    var expanded by remember { mutableStateOf(false) }
-    var nota by remember { mutableStateOf("") }
+    var cantidadTxt by remember { mutableStateOf("") }
+    var categoria by remember { mutableStateOf("") }
+    var fechaMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    val scope = rememberCoroutineScope()
-
-    fun limitTo25Words(input: String): String {
-        val words = input.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
-        return if (words.size <= 25) input else words.take(25).joinToString(" ")
-    }
-    val remaining = (25 - nota.trim().split(Regex("\\s+")).filter { it.isNotBlank() }.size)
-        .coerceAtLeast(0)
 
     Scaffold(
-        bottomBar = {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.Start
-            ) {
-                Button(onClick = onBack) { Text("Atrás") }
-            }
+        topBar = {
+            TopAppBar(
+                title = { Text("Añadir gasto") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Text("<")
+                    }
+                }
+            )
         }
     ) { inner ->
-
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner)
-                .padding(horizontal = 24.dp)
+                .padding(24.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .align(Alignment.Center)
-                    .fillMaxWidth(0.9f),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                modifier = Modifier.align(Alignment.Center)
             ) {
-                Text(
-                    "Nuevo gasto",
-                    style = MaterialTheme.typography.headlineSmall,
-                    textAlign = TextAlign.Center
-                )
-
-                error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-
                 OutlinedTextField(
-                    value = cantidadText,
-                    onValueChange = { cantidadText = it },
+                    value = cantidadTxt,
+                    onValueChange = { cantidadTxt = it },
                     label = { Text("Cantidad") },
+                    enabled = !loading,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    OutlinedTextField(
-                        value = categoria ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Categoría") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                        modifier = Modifier
-                            .menuAnchor()
-                            .fillMaxWidth()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ) {
-                        CATEGORIAS_GASTO.forEach { c ->
-                            DropdownMenuItem(
-                                text = { Text(c) },
-                                onClick = { categoria = c; expanded = false }
-                            )
-                        }
-                    }
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = categoria,
+                    onValueChange = { categoria = it },
+                    label = { Text("Categoría (opcional)") },
+                    enabled = !loading,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                // Si ya tenías date picker, aquí iría
+
+                error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(text = it, color = MaterialTheme.colorScheme.error)
                 }
 
-                OutlinedTextField(
-                    value = nota,
-                    onValueChange = { nota = limitTo25Words(it) },
-                    label = { Text("Nota (opcional)") },
-                    supportingText = { Text("Máx. 25 palabras • Restantes: $remaining") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Spacer(Modifier.height(16.dp))
 
                 Button(
+                    enabled = !loading,
                     onClick = {
-                        val cantidad = cantidadText.replace(',', '.').toDoubleOrNull()
-                        when {
-                            cantidad == null || cantidad <= 0.0 ->
-                                error = "Introduce una cantidad válida"
-                            categoria.isNullOrBlank() ->
-                                error = "Elige una categoría"
-                            else -> {
-                                error = null
-                                val fecha = System.currentTimeMillis()
-                                val catFinal =
-                                    if (nota.isBlank()) categoria!! else "${categoria!!} · ${nota.trim()}"
-                                scope.launch {
-                                    vm.agregarGasto(
-                                        familiaId = familiaId,
-                                        cantidad = cantidad,
-                                        categoria = catFinal,
-                                        fechaMillis = fecha
-                                    )
-                                    onGuardado()
-                                }
+                        val num = cantidadTxt.replace(",", ".").toDoubleOrNull()
+                        if (num == null) {
+                            error = "Cantidad no válida"
+                            return@Button
+                        }
+
+                        loading = true
+                        error = null
+
+                        scope.launch {
+                            try {
+                                vm.agregarGasto(
+                                    familiaId = familiaId,
+                                    cantidad = num,
+                                    categoria = categoria.ifBlank { null },
+                                    fechaMillis = fechaMillis
+                                )
+                                loading = false
+                                onGuardado()
+                            } catch (e: Exception) {
+                                loading = false
+                                error = e.localizedMessage ?: "No se pudo guardar el gasto"
                             }
                         }
                     },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp)
-                ) { Text("Guardar gasto") }
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(if (loading) "Guardando..." else "Guardar gasto")
+                }
             }
         }
     }
 }
+
 
 
 

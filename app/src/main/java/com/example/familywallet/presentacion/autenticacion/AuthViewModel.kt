@@ -63,10 +63,8 @@ class AuthViewModel(
         }
     }
 
-    fun logout() {
-        viewModelScope.launch {
-            repo.logout()
-        }
+    suspend fun logout() {
+        repo.logout()
     }
 
     fun enviarResetPassword(

@@ -1,135 +1,165 @@
 package com.example.familywallet.presentacion.autenticacion
 
+import android.util.Patterns
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.familywallet.ui.validarEmail
-import com.example.familywallet.ui.validarPassword
+import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaRegistro(
     authVM: AuthViewModel,
-    onRegistroOk: () -> Unit,
+    onRegistroOk: (String, String) -> Unit,
     onVolverLogin: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var pass2 by remember { mutableStateOf("") }
-
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var passError by remember { mutableStateOf<String?>(null) }
-    var pass2Error by remember { mutableStateOf<String?>(null) }
-    var generalError by remember { mutableStateOf<String?>(null) }
+    var showPass by remember { mutableStateOf(false) }
     var cargando by remember { mutableStateOf(false) }
+    var generalError by remember { mutableStateOf<String?>(null) }
 
-    val mismatch by remember(pass, pass2) {
-        mutableStateOf(pass.isNotBlank() && pass2.isNotBlank() && pass != pass2)
-    }
-    val mismatchMsg = if (mismatch) "Las contraseñas no coinciden" else null
-
-    fun validarCampos(): Boolean {
-        emailError = validarEmail(email.trim())
-        passError = validarPassword(pass)
-        pass2Error = when {
-            pass2.isBlank() -> "Repite la contraseña"
-            else -> null
+    fun validar(): Boolean {
+        val e = email.trim()
+        if (e.isBlank()) {
+            generalError = "El correo es obligatorio"
+            return false
         }
-        return emailError == null && passError == null && pass2Error == null && !mismatch
+        if (!Patterns.EMAIL_ADDRESS.matcher(e).matches()) {
+            generalError = "Correo no válido"
+            return false
+        }
+        if (pass.length < 6) {
+            generalError = "La contraseña debe tener al menos 6 caracteres"
+            return false
+        }
+        if (pass != pass2) {
+            generalError = "Las contraseñas no coinciden"
+            return false
+        }
+        return true
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
-    ) {
+    Scaffold { inner ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(inner)
                 .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(0.9f),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Text("Crear cuenta", style = MaterialTheme.typography.headlineMedium)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Registro",
+                    style = MaterialTheme.typography.titleLarge
+                )
+
+                Spacer(Modifier.height(24.dp))
 
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it; emailError = null; generalError = null },
+                    onValueChange = { email = it },
                     label = { Text("Correo") },
-                    singleLine = true,
-                    isError = emailError != null,
-                    supportingText = { emailError?.let { Text(it, color = MaterialTheme.colorScheme.error) } },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    enabled = !cargando,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = pass,
-                    onValueChange = { pass = it; passError = null; generalError = null },
+                    onValueChange = { pass = it },
                     label = { Text("Contraseña") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    isError = passError != null || mismatch,
-                    supportingText = {
-                        (passError ?: mismatchMsg)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    },
+                    visualTransformation = if (showPass)
+                        VisualTransformation.None
+                    else
+                        PasswordVisualTransformation(),
+                    enabled = !cargando,
                     modifier = Modifier.fillMaxWidth()
                 )
+
+                Spacer(Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = pass2,
-                    onValueChange = { pass2 = it; pass2Error = null; generalError = null },
-                    label = { Text("Repite la contraseña") },
-                    singleLine = true,
-                    visualTransformation = PasswordVisualTransformation(),
-                    isError = pass2Error != null || mismatch,
-                    supportingText = {
-                        (pass2Error ?: mismatchMsg)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                    },
+                    onValueChange = { pass2 = it },
+                    label = { Text("Repetir contraseña") },
+                    visualTransformation = if (showPass)
+                        VisualTransformation.None
+                    else
+                        PasswordVisualTransformation(),
+                    enabled = !cargando,
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                generalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
+                    TextButton(onClick = { showPass = !showPass }) {
+                        Text(if (showPass) "Ocultar" else "Mostrar")
+                    }
+                }
+
+                generalError?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+
+                Spacer(Modifier.height(16.dp))
 
                 Button(
                     onClick = {
-                        if (!validarCampos()) return@Button
+                        if (!validar()) return@Button
                         cargando = true
-                        authVM.registrar(
-                            email = email.trim(),
-                            pass = pass,
-                            onOk = {
-                                cargando = false
-                                generalError = null
-                                onRegistroOk()
-                            },
-                            onError = { msg ->
-                                cargando = false
-                                generalError = msg
-                            }
-                        )
+                        generalError = null
+
+                        scope.launch {
+                            authVM.registrar(
+                                email = email.trim(),
+                                pass = pass,
+                                onOk = {
+                                    cargando = false
+                                    generalError = null
+                                    // devolvemos datos por si los quieres reusar
+                                    onRegistroOk(email.trim(), pass)
+                                },
+                                onError = { msg ->
+                                    cargando = false
+                                    generalError = msg
+                                }
+                            )
+                        }
                     },
                     enabled = !cargando,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(if (cargando) "Creando..." else "Crear cuenta")
+                    Text(if (cargando) "Creando cuenta..." else "Registrarse")
                 }
 
-                TextButton(onClick = onVolverLogin) { Text("Volver a iniciar sesión") }
+                Spacer(Modifier.height(12.dp))
+
+                TextButton(
+                    onClick = onVolverLogin,
+                    enabled = !cargando
+                ) {
+                    Text("Volver al inicio de sesión")
+                }
             }
         }
     }
 }
+
 
 
 

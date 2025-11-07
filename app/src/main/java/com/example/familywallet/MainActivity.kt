@@ -16,6 +16,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.familywallet.datos.repositorios.ServiceLocator
 import com.example.familywallet.presentacion.autenticacion.AuthViewModel
@@ -39,6 +40,7 @@ import com.example.familywallet.theme.ThemeVMFactory
 import com.example.familywallet.theme.ThemeViewModel
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
+import kotlinx.coroutines.launch
 
 // ----------------------------
 // Rutas
@@ -162,20 +164,20 @@ fun AppNav(
     isDark: Boolean,
     onToggleDark: () -> Unit
 ) {
-    val nav = androidx.navigation.compose.rememberNavController()
+    val nav = rememberNavController()
 
-    // ===== ViewModels creados UNA sola vez con su factory =====
+    val scope = rememberCoroutineScope()
+
+    // VMs
     val movimientosVM: MovimientosViewModel = viewModel(
         factory = MovimientosVMFactory(ServiceLocator.movimientosRepo)
     )
-
     val familiaVM: FamiliaViewModel = viewModel(
         factory = FamiliaVMFactory(
             familiaRepo = ServiceLocator.familiaRepo,
             authRepo = ServiceLocator.authRepo
         )
     )
-
     val authVM: AuthViewModel = viewModel(
         factory = AuthViewModelFactory(ServiceLocator.authRepo)
     )
@@ -220,7 +222,7 @@ fun AppNav(
         composable(Ruta.Registro.route) {
             PantallaRegistro(
                 authVM = authVM,
-                onRegistroOk = {
+                onRegistroOk = { _, _ ->
                     nav.navigate(Ruta.Login.route) {
                         popUpTo(Ruta.Registro.route) { inclusive = true }
                         launchSingleTop = true
@@ -229,6 +231,7 @@ fun AppNav(
                 onVolverLogin = { nav.popBackStack() }
             )
         }
+
 
         // RECUPERAR PASSWORD
         composable(Ruta.Recuperar.route) {
@@ -240,6 +243,7 @@ fun AppNav(
         }
 
         // CONFIG FAMILIA
+        // Config familia
         composable(Ruta.ConfigFamilia.route) {
             PantallaConfigFamilia(
                 vm = familiaVM,
@@ -251,15 +255,24 @@ fun AppNav(
                 },
                 onCrear = { nav.navigate(Ruta.CrearFamilia.route) },
                 onUnirse = { nav.navigate(Ruta.UnirseFamilia.route) },
+
                 onLogout = {
-                    authVM.logout()
-                    nav.navigate(Ruta.Login.route) {
-                        popUpTo(nav.graph.startDestinationId) { inclusive = true }
-                        launchSingleTop = true
+                    scope.launch {
+                        try {
+                            // Esperamos a que termine el logout
+                            authVM.logout()
+                        } finally {
+                            // Y AHORA navegamos al login, limpiando el back stack
+                            nav.navigate(Ruta.Login.route) {
+                                popUpTo(nav.graph.id) { inclusive = true }
+                                launchSingleTop = true
+                            }
+                        }
                     }
                 }
             )
         }
+
 
         composable(Ruta.CrearFamilia.route) {
             PantallaCrearFamilia(
@@ -291,16 +304,18 @@ fun AppNav(
         }
 
         // CONFIGURACIÓN
-        composable(Ruta.Configuracion.route) {
+        composable(route = Ruta.Configuracion.route) {
             PantallaConfiguracion(
                 isDark = isDark,
                 onToggleDark = onToggleDark,
                 onBack = { nav.popBackStack() },
                 onLogout = {
-                    authVM.logout()
-                    nav.navigate(Ruta.Login.route) {
-                        popUpTo(nav.graph.startDestinationId) { inclusive = true }
-                        launchSingleTop = true
+                    scope.launch {
+                        authVM.logout()
+                        nav.navigate(Ruta.Login.route) {
+                            popUpTo(nav.graph.id) { inclusive = true }
+                            launchSingleTop = true
+                        }
                     }
                 }
             )

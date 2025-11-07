@@ -1,21 +1,20 @@
 package com.example.familywallet.presentacion.autenticacion
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.provider.Settings
+import android.util.Patterns
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.familywallet.ui.validarEmail
+import kotlinx.coroutines.launch
 
+@SuppressLint("HardwareIds")
 @Composable
 fun PantallaLogin(
     authVM: AuthViewModel,
@@ -24,16 +23,17 @@ fun PantallaLogin(
     onOlvido: () -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     // ID único del dispositivo
-    @SuppressLint("HardwareIds")
-    val deviceId = remember {
-        Settings.Secure.getString(
-            context.contentResolver,
-            Settings.Secure.ANDROID_ID
-        ) ?: "Unknown"
+    val deviceId by remember {
+        mutableStateOf(
+            Settings.Secure.getString(
+                context.contentResolver,
+                Settings.Secure.ANDROID_ID
+            ) ?: "unknown"
+        )
     }
-
 
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
@@ -41,128 +41,131 @@ fun PantallaLogin(
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    var emailTouched by remember { mutableStateOf(false) }
-    var passTouched by remember { mutableStateOf(false) }
+    fun validarEmail(e: String): String? =
+        if (e.isBlank()) "El correo es obligatorio"
+        else if (!Patterns.EMAIL_ADDRESS.matcher(e).matches()) "Correo no válido"
+        else null
 
-    val rawEmailError = validarEmail(email)
-    val rawPassError  = if (pass.isBlank()) "La contraseña es obligatoria" else null
+    fun validarPass(p: String): String? =
+        if (p.isBlank()) "La contraseña es obligatoria"
+        else if (p.length < 6) "Mínimo 6 caracteres"
+        else null
 
-    val emailErrorToShow = if (emailTouched) rawEmailError else null
-    val passErrorToShow  = if (passTouched)  rawPassError  else null
-
-    val canSubmit  = rawEmailError == null && rawPassError == null && !loading
-
-    val requiereVerificacion = remember(error) {
-        error?.startsWith("Debes verificar tu correo") == true
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.fillMaxWidth()
+    Scaffold { inner ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(inner)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
         ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Iniciar sesión",
+                    style = MaterialTheme.typography.titleLarge
+                )
 
-            Text(
-                "Iniciar sesión",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
+                Spacer(Modifier.height(24.dp))
 
-            OutlinedTextField(
-                value = email,
-                onValueChange = {
-                    email = it
-                    emailTouched = true
-                    error = null
-                },
-                label = { Text("Correo") },
-                isError = emailErrorToShow != null,
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                    keyboardType = KeyboardType.Email
-                ),
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth()
-            )
-            emailErrorToShow?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("Correo") },
+                    enabled = !loading,
+                    modifier = Modifier.fillMaxWidth()
+                )
 
-            OutlinedTextField(
-                value = pass,
-                onValueChange = {
-                    pass = it
-                    passTouched = true
-                    error = null
-                },
-                label = { Text("Contraseña") },
-                singleLine = true,
-                isError = passErrorToShow != null,
-                visualTransformation = if (showPass) VisualTransformation.None else PasswordVisualTransformation(),
-                trailingIcon = {
+                Spacer(Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = pass,
+                    onValueChange = { pass = it },
+                    label = { Text("Contraseña") },
+                    enabled = !loading,
+                    visualTransformation = if (showPass)
+                        VisualTransformation.None
+                    else
+                        PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
+                ) {
                     TextButton(onClick = { showPass = !showPass }) {
-                        Text(if (showPass) "Ocultar" else "Ver")
+                        Text(if (showPass) "Ocultar" else "Mostrar")
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-            passErrorToShow?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
 
-            Button(
-                onClick = {
-                    loading = true
-                    error = null
-                    authVM.login(
-                        email = email.trim(),
-                        pass = pass,
-                        deviceId = deviceId,
-                        onOk = {
-                            loading = false
-                            onLoginOk()
-                        },
-                        onError = { msg ->
-                            loading = false
-                            error = msg
-                        }
+                error?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error
                     )
-                },
-                enabled = canSubmit,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = if (loading) "Entrando..." else "Entrar")
-            }
+                }
 
-            error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
-            }
+                Spacer(Modifier.height(16.dp))
 
-            if (requiereVerificacion) {
-                OutlinedButton(
+                Button(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_MAIN).apply {
-                            addCategory(Intent.CATEGORY_APP_EMAIL)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        // Validación rápida
+                        val errEmail = validarEmail(email.trim())
+                        val errPass = validarPass(pass)
+
+                        if (errEmail != null) {
+                            error = errEmail
+                            return@Button
                         }
-                        runCatching { context.startActivity(intent) }
+                        if (errPass != null) {
+                            error = errPass
+                            return@Button
+                        }
+
+                        loading = true
+                        error = null
+
+                        scope.launch {
+                            authVM.login(
+                                email = email.trim(),
+                                pass = pass,
+                                deviceId = deviceId,
+                                onOk = {
+                                    loading = false
+                                    onLoginOk()
+                                },
+                                onError = { msg ->
+                                    loading = false
+                                    error = msg
+                                }
+                            )
+                        }
                     },
+                    enabled = !loading,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Abrir mi correo")
+                    Text(if (loading) "Entrando..." else "Entrar")
                 }
-                Text(
-                    "Revisa la bandeja de entrada y spam. Si no te llega, vuelve a intentar iniciar sesión para reenviar el enlace.",
-                    style = MaterialTheme.typography.bodySmall
-                )
-            }
 
-            TextButton(onClick = onOlvido) { Text("¿Olvidaste tu contraseña?") }
-            TextButton(onClick = onRegistro) { Text("Crear cuenta") }
+                Spacer(Modifier.height(12.dp))
+
+                TextButton(
+                    onClick = onOlvido,
+                    enabled = !loading
+                ) { Text("He olvidado mi contraseña") }
+
+                Spacer(Modifier.height(8.dp))
+
+                TextButton(
+                    onClick = onRegistro,
+                    enabled = !loading
+                ) { Text("Crear cuenta nueva") }
+            }
         }
     }
 }
+
 
 
 
