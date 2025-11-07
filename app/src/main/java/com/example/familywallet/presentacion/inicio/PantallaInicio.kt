@@ -3,6 +3,7 @@ package com.example.familywallet.presentacion.inicio
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -16,12 +17,7 @@ import androidx.compose.ui.unit.dp
 import com.example.familywallet.datos.repositorios.ServiceLocator
 import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
-import com.example.familywallet.presentacion.ui.MembershipGuard
-import com.example.familywallet.presentacion.ui.rangoAnioActual
-import com.example.familywallet.presentacion.ui.rangoDiaActual
-import com.example.familywallet.presentacion.ui.rangoMesActual
-import com.example.familywallet.presentacion.ui.rangoSemanaActual
-import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
+import com.example.familywallet.presentacion.ui.*
 import java.util.Locale
 
 @Composable
@@ -84,23 +80,17 @@ fun PantallaInicio(
         onExpulsado = onExpulsado
     )
 
+    // Escucha en tiempo real y cargamos por defecto el mes actual
     val locale = Locale("es", "ES")
-
-    // ESCUCHA EN TIEMPO REAL de los movimientos de la familia
-    LaunchedEffect(key1 = familiaId) {
+    LaunchedEffect(familiaId) {
         vm.iniciarEscuchaTiempoReal(familiaId)
         vm.aplicarRango(familiaId, rangoMesActual(locale))
     }
 
-
     // Nombre de la familia
     var nombreFamilia by remember(familiaId) { mutableStateOf<String?>(null) }
     LaunchedEffect(familiaId) {
-        nombreFamilia = try {
-            ServiceLocator.familiaRepo.nombreDe(familiaId)
-        } catch (_: Exception) {
-            null
-        }
+        nombreFamilia = runCatching { ServiceLocator.familiaRepo.nombreDe(familiaId) }.getOrNull()
     }
 
     val ingresos  = vm.totalIngresos
@@ -128,7 +118,7 @@ fun PantallaInicio(
                 },
                 title = {},
                 actions = {
-                    // Menú de periodo (icono 3 líneas)
+                    // Menú periodo
                     Box {
                         IconButton(onClick = { menuPeriodoAbierto = true }) {
                             TriLinesIcon(color = MaterialTheme.colorScheme.onPrimary)
@@ -171,13 +161,10 @@ fun PantallaInicio(
 
                     Spacer(Modifier.width(4.dp))
 
-                    // Menú de 3 puntos
+                    // Menú 3 puntos
                     Box {
                         IconButton(onClick = { menuOpcionesAbierto = true }) {
-                            Icon(
-                                Icons.Default.MoreVert,
-                                contentDescription = "Más opciones"
-                            )
+                            Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
                         }
                         DropdownMenu(
                             expanded = menuOpcionesAbierto,
@@ -222,12 +209,25 @@ fun PantallaInicio(
                 .padding(inner)
                 .padding(horizontal = 24.dp)
         ) {
+            // Flecha atrás debajo de la barra superior
+            IconButton(
+                onClick = onBackToConfig,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(top = 8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = "Atrás",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
             // Contenido centrado
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Nombre de la familia
                 Text(
                     text = "Familia ${nombreFamilia.orEmpty()}".trim(),
                     style = MaterialTheme.typography.titleLarge,
@@ -237,11 +237,11 @@ fun PantallaInicio(
 
                 Spacer(Modifier.height(24.dp))
 
-                // Mes / periodo
                 Text(
                     text = vm.etiquetaPeriodo.ifBlank { vm.nombreMesActual() },
                     style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.primary
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -272,29 +272,9 @@ fun PantallaInicio(
                     Button(onClick = onIrAddIngreso) { Text("Añadir ingreso") }
                 }
             }
-
-            // Botón Atrás abajo a la izquierda
-            Button(
-                onClick = onBackToConfig,
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(bottom = 16.dp)
-            ) {
-                Text("Atrás")
-            }
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
 
 
 

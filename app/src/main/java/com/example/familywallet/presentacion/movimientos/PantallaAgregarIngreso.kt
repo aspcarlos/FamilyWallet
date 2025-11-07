@@ -4,7 +4,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,7 +20,6 @@ import com.example.familywallet.presentacion.ui.MembershipGuard
 import kotlinx.coroutines.launch
 import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaAgregarIngreso(
     familiaId: String,
@@ -25,6 +29,7 @@ fun PantallaAgregarIngreso(
     onBack: () -> Unit,
     onExpulsado: () -> Unit
 ) {
+    // Control de expulsión
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
@@ -34,56 +39,44 @@ fun PantallaAgregarIngreso(
     val scope = rememberCoroutineScope()
 
     var cantidadTxt by remember { mutableStateOf("") }
-    var categoriaTxt by remember { mutableStateOf("") }
     var notaTxt      by remember { mutableStateOf("") }
 
-    var cantidadError  by remember { mutableStateOf<String?>(null) }
-    var categoriaError by remember { mutableStateOf<String?>(null) }
-    var generalError   by remember { mutableStateOf<String?>(null) }
-    var cargando       by remember { mutableStateOf(false) }
-
-    val categoriasSugeridas = listOf(
-        "Nómina",
-        "Venta",
-        "Regalo",
-        "Devolución",
-        "Otros"
-    )
+    var cantidadError by remember { mutableStateOf<String?>(null) }
+    var generalError  by remember { mutableStateOf<String?>(null) }
+    var cargando      by remember { mutableStateOf(false) }
 
     fun validar(): Boolean {
-        var ok = true
         cantidadError = null
-        categoriaError = null
         generalError = null
 
         val valor = cantidadTxt.replace(",", ".").toDoubleOrNull()
         if (valor == null || valor <= 0.0) {
             cantidadError = "Introduce una cantidad válida"
-            ok = false
+            return false
         }
-        if (categoriaTxt.isBlank()) {
-            categoriaError = "La categoría es obligatoria"
-            ok = false
-        }
-        return ok
+        return true
     }
 
-    val puedeGuardar = !cargando &&
-            cantidadTxt.isNotBlank() &&
-            categoriaTxt.isNotBlank()
+    val puedeGuardar = !cargando && cantidadTxt.isNotBlank()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        // Flecha atrás arriba a la izquierda
         IconButton(
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart)
         ) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Volver",
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
 
+        // CONTENIDO CENTRADO
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -91,7 +84,13 @@ fun PantallaAgregarIngreso(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Añadir ingreso", style = MaterialTheme.typography.headlineSmall)
+
+            Text(
+                text = "Añadir ingreso",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+
 
             // CANTIDAD
             OutlinedTextField(
@@ -110,49 +109,6 @@ fun PantallaAgregarIngreso(
                     }
                 }
             )
-
-            // CATEGORÍA (DESPLEGABLE)
-            var expanded by remember { mutableStateOf(false) }
-            ExposedDropdownMenuBox(
-                expanded = expanded,
-                onExpandedChange = { expanded = !expanded }
-            ) {
-                OutlinedTextField(
-                    value = categoriaTxt,
-                    onValueChange = {
-                        categoriaTxt = it
-                        if (categoriaError != null) categoriaError = null
-                    },
-                    label = { Text("Categoría") },
-                    modifier = Modifier
-                        .menuAnchor()
-                        .fillMaxWidth(),
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
-                    isError = categoriaError != null,
-                    singleLine = true,
-                    supportingText = {
-                        categoriaError?.let { msg ->
-                            Text(msg, color = MaterialTheme.colorScheme.error)
-                        }
-                    }
-                )
-                ExposedDropdownMenu(
-                    expanded = expanded,
-                    onDismissRequest = { expanded = false },
-                    containerColor = MaterialTheme.colorScheme.background
-                ) {
-                    categoriasSugeridas.forEach { cat ->
-                        DropdownMenuItem(
-                            text = { Text(cat) },
-                            onClick = {
-                                categoriaTxt = cat
-                                categoriaError = null
-                                expanded = false
-                            }
-                        )
-                    }
-                }
-            }
 
             // NOTA (OPCIONAL)
             OutlinedTextField(
@@ -179,9 +135,8 @@ fun PantallaAgregarIngreso(
                     if (!validar()) return@Button
 
                     val cantidad = cantidadTxt.replace(",", ".").toDouble()
-                    val categoria = categoriaTxt.trim()
-                    val nota = notaTxt.trim().ifBlank { null }
                     val fecha = Calendar.getInstance().timeInMillis
+                    val nota = notaTxt.trim().ifBlank { null }
 
                     cargando = true
                     scope.launch {
@@ -189,7 +144,7 @@ fun PantallaAgregarIngreso(
                             vm.agregarIngreso(
                                 familiaId = familiaId,
                                 cantidad = cantidad,
-                                categoria = categoria,
+                                categoria = null,   // ingresos SIN categoría
                                 nota = nota,
                                 fechaMillis = fecha
                             )
@@ -211,6 +166,7 @@ fun PantallaAgregarIngreso(
         }
     }
 }
+
 
 
 

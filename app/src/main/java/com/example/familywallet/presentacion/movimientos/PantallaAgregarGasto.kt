@@ -75,8 +75,13 @@ fun PantallaAgregarGasto(
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart)
         ) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
+            Icon(
+                imageVector = Icons.Default.ArrowBack,
+                contentDescription = "Volver",
+                tint = MaterialTheme.colorScheme.primary
+            )
         }
+
 
         // Contenido centrado
         Column(
@@ -87,7 +92,9 @@ fun PantallaAgregarGasto(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            Text("Añadir gasto", style = MaterialTheme.typography.headlineSmall)
+            Text("Añadir gasto",
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.primary)
 
             // Cantidad
             OutlinedTextField(
@@ -170,7 +177,7 @@ fun PantallaAgregarGasto(
                                 familiaId = familiaId,
                                 cantidad = cantidad,
                                 categoria = categoria,
-                                nota = notaTxt.trim().ifBlank { null }, // ⬅️ ENVIAMOS LA NOTA
+                                nota = notaTxt.trim().ifBlank { null },
                                 fechaMillis = fecha
                             )
                             cargando = false
