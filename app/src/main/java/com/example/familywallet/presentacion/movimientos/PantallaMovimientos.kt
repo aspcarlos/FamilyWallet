@@ -14,10 +14,6 @@ fun PantallaMovimientos(
     onNuevo: () -> Unit
 ) {
     ScreenScaffold(
-        // Si quisieras un TopAppBar, puedes descomentar:
-        // topBar = {
-        //     TopAppBar(title = { Text("Movimientos") })
-        // }
     ) { padding ->
         Box(
             modifier = Modifier

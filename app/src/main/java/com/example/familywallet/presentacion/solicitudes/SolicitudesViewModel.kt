@@ -21,7 +21,6 @@ class SolicitudesViewModel(
     private val _procesandoId = MutableStateFlow<String?>(null)
     val procesandoId: StateFlow<String?> = _procesandoId
 
-    // 👇 NUEVO
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error
 
