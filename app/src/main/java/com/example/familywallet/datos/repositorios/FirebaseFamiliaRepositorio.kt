@@ -1,6 +1,7 @@
 package com.example.familywallet.datos.repositorios
 
 import com.example.familywallet.datos.modelos.Miembro
+import com.example.familywallet.datos.modelos.toRol
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -28,10 +29,11 @@ class FirebaseFamiliaRepositorio(
                     id    = d.id,
                     uid   = d.getString("uid") ?: "",
                     alias = d.getString("alias") ?: "",
-                    rol   = d.getString("rol") ?: "miembro"
+                    rol   = d.getString("rol").toRol()
                 )
             }
     } catch (_: Exception) { emptyList() }
+
 
     // === MI FAMILIA (REALTIME) ===
     override fun observarMiFamiliaId(uid: String): Flow<String?> = callbackFlow {

@@ -17,7 +17,7 @@ object FakeFamiliaRepositorio {
     }
 
     private val nombres = mutableMapOf<String, String>()
-    // ...
+
     suspend fun nombreDe(familiaId: String): String? = nombres[familiaId]
 }
 
