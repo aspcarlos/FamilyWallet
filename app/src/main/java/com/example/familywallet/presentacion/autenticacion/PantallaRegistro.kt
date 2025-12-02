@@ -1,6 +1,5 @@
 package com.example.familywallet.presentacion.autenticacion
 
-import android.util.Patterns
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,6 +9,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
+import com.example.familywallet.ui.validarEmail
+import com.example.familywallet.ui.validarPassword
+import com.example.familywallet.ui.validarConfirmacion
 
 @Composable
 fun PantallaRegistro(
@@ -24,27 +26,26 @@ fun PantallaRegistro(
     var pass2 by remember { mutableStateOf("") }
     var showPass by remember { mutableStateOf(false) }
     var cargando by remember { mutableStateOf(false) }
+
     var generalError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passError by remember { mutableStateOf<String?>(null) }
+    var pass2Error by remember { mutableStateOf<String?>(null) }
 
     fun validar(): Boolean {
         val e = email.trim()
-        if (e.isBlank()) {
-            generalError = "El correo es obligatorio"
-            return false
-        }
-        if (!Patterns.EMAIL_ADDRESS.matcher(e).matches()) {
-            generalError = "Correo no válido"
-            return false
-        }
-        if (pass.length < 6) {
-            generalError = "La contraseña debe tener al menos 6 caracteres"
-            return false
-        }
-        if (pass != pass2) {
-            generalError = "Las contraseñas no coinciden"
-            return false
-        }
-        return true
+
+        val eError = validarEmail(e)
+        val pError = validarPassword(pass)
+        val cError = validarConfirmacion(pass, pass2)
+
+        emailError = eError
+        passError = pError
+        pass2Error = cError
+
+        generalError = null
+
+        return eError == null && pError == null && cError == null
     }
 
     Scaffold { inner ->
@@ -63,41 +64,81 @@ fun PantallaRegistro(
 
                 Spacer(Modifier.height(24.dp))
 
+                // EMAIL
                 OutlinedTextField(
                     value = email,
-                    onValueChange = { email = it },
+                    onValueChange = {
+                        email = it
+                        // Si quieres validar al escribir:
+                        emailError = null
+                    },
                     label = { Text("Correo") },
                     enabled = !cargando,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = emailError != null
                 )
+                emailError?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
                 Spacer(Modifier.height(12.dp))
 
+                // PASSWORD
                 OutlinedTextField(
                     value = pass,
-                    onValueChange = { pass = it },
+                    onValueChange = {
+                        pass = it
+                        // passError = null  // si quieres limpiar al escribir
+                    },
                     label = { Text("Contraseña") },
                     visualTransformation = if (showPass)
                         VisualTransformation.None
                     else
                         PasswordVisualTransformation(),
                     enabled = !cargando,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = passError != null
                 )
+                passError?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
                 Spacer(Modifier.height(12.dp))
 
+                // CONFIRMACIÓN PASSWORD
                 OutlinedTextField(
                     value = pass2,
-                    onValueChange = { pass2 = it },
+                    onValueChange = {
+                        pass2 = it
+                        // pass2Error = null
+                    },
                     label = { Text("Repetir contraseña") },
                     visualTransformation = if (showPass)
                         VisualTransformation.None
                     else
                         PasswordVisualTransformation(),
                     enabled = !cargando,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    isError = pass2Error != null
                 )
+                pass2Error?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = it,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -108,6 +149,7 @@ fun PantallaRegistro(
                     }
                 }
 
+                // Error general (por ejemplo, Firebase, backend, etc.)
                 generalError?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -131,7 +173,6 @@ fun PantallaRegistro(
                                 onOk = {
                                     cargando = false
                                     generalError = null
-                                    // devolvemos datos por si los quieres reusar
                                     onRegistroOk(email.trim(), pass)
                                 },
                                 onError = { msg ->
@@ -159,6 +200,8 @@ fun PantallaRegistro(
         }
     }
 }
+
+
 
 
 
