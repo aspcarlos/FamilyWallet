@@ -53,18 +53,12 @@ class MovimientosViewModel(
         "MXN" to 19.5
     )
 
-    // --- TIEMPO REAL ---
-
     // Última lista recibida por el listener
     private var movimientosTiempoReal: List<Movimiento> = emptyList()
 
     // Job para poder cancelar la escucha al cambiar de familia / destruir VM
     private var escuchaJob: Job? = null
 
-    /**
-     * Empieza a escuchar en tiempo real TODOS los movimientos de la familia.
-     * PantallaInicio usará esto para que móvil y emulador se sincronicen.
-     */
     fun iniciarEscuchaTiempoReal(familiaId: String) {
         escuchaJob?.cancel()
 
@@ -76,11 +70,6 @@ class MovimientosViewModel(
         }
     }
 
-    /**
-     * Aplica un rango (día, semana, mes, año) desde PantallaInicio.
-     * Si ya tenemos escucha en tiempo real, sólo re-filtra la lista.
-     * Si NO la tenemos (por ejemplo en historial), hace llamada normal a Firestore.
-     */
     fun aplicarRango(familiaId: String, rango: RangoFecha) {
         etiquetaPeriodo = rango.etiqueta
         ultimoRango = rango
@@ -94,9 +83,9 @@ class MovimientosViewModel(
         }
     }
 
-    /**
-     * Recalcula ingresos/gastos usando la lista en tiempo real y el rango seleccionado.
-     */
+
+    // Recalcula ingresos/gastos usando la lista en tiempo real y el rango seleccionado.
+
     private fun recomputarTotalesTiempoReal() {
         val lista = movimientosTiempoReal
         val rango = ultimoRango
@@ -118,8 +107,6 @@ class MovimientosViewModel(
             .sumOf { it.cantidad }
     }
 
-    // ---------- helpers de lista "tradicional" (historial) ----------
-
     private fun setItems(nuevos: List<Movimiento>) {
         _itemsDelMesState.value = nuevos
         recomputarTotalesLista()
@@ -133,7 +120,7 @@ class MovimientosViewModel(
             lista.filter { it.tipo == Movimiento.Tipo.GASTO }.sumOf { it.cantidad }
     }
 
-    // ---------- cargas "tradicionales" ----------
+    // cargas
 
     fun cargarMesActual(familiaId: String) {
         val cal = Calendar.getInstance()
@@ -168,7 +155,7 @@ class MovimientosViewModel(
         }
     }
 
-    // ---------- inserciones ----------
+    // inserciones
 
     suspend fun agregarGasto(
         familiaId: String,
@@ -222,7 +209,7 @@ class MovimientosViewModel(
         }
     }
 
-    // ---------- moneda ----------
+    // moneda
 
     fun cambiarMoneda(nueva: String) {
         if (nueva == monedaActual) return
@@ -236,7 +223,7 @@ class MovimientosViewModel(
         monedaActual = nueva
     }
 
-    // ---------- cambio de familia ----------
+    // cambio de familia
 
     fun onFamiliaCambiada(familiaId: String) {
         resetEstado()

@@ -13,14 +13,13 @@ import java.util.TimeZone
 // Filtros para la barra de “Día / Semana / Mes / Año”
 enum class FiltroPeriodo { DIA, SEMANA, MES, ANIO }
 
-// Rango temporal + etiqueta lista para mostrar en la UI
 data class RangoFecha(
-    val inicio: Long,   // millis (inclusive)
-    val fin: Long,      // millis (inclusive)
+    val inicio: Long,
+    val fin: Long,
     val etiqueta: String
 )
 
-/** Calendario base consistente (lunes como inicio de semana). */
+// Calendario base consistente (lunes como inicio de semana).
 private fun calBase(
     tz: TimeZone = TimeZone.getDefault(),
     locale: Locale = Locale("es", "ES")
@@ -28,7 +27,7 @@ private fun calBase(
     firstDayOfWeek = Calendar.MONDAY
 }
 
-/** Rango del día actual (00:00:00.000 … 23:59:59.999). */
+// Rango del día actual
 fun rangoDiaActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     val c = calBase(locale = locale)
     c.set(Calendar.HOUR_OF_DAY, 0)
@@ -43,7 +42,7 @@ fun rangoDiaActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     return RangoFecha(ini, fin, fmt.format(Date(ini)))
 }
 
-/** Rango de la semana actual (lunes 00:00 … domingo 23:59). */
+// Rango de la semana actual (lunes 00:00 … domingo 23:59).
 fun rangoSemanaActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     val c = calBase(locale = locale)
     c.set(Calendar.HOUR_OF_DAY, 0)
@@ -64,7 +63,7 @@ fun rangoSemanaActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     return RangoFecha(ini, fin, etiqueta)
 }
 
-/** Rango del mes actual (1er día 00:00 … último día 23:59). */
+// Rango del mes actual (1er día 00:00 … último día 23:59).
 fun rangoMesActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     val c = calBase(locale = locale)
     c.set(Calendar.DAY_OF_MONTH, 1)
@@ -82,7 +81,7 @@ fun rangoMesActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     return RangoFecha(ini, fin, etiqueta)
 }
 
-/** Rango del año actual (1 de enero 00:00 … 31 de dic. 23:59). */
+// Rango del año actual
 fun rangoAnioActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     val c = calBase(locale = locale)
     c.set(Calendar.MONTH, Calendar.JANUARY)
@@ -100,7 +99,7 @@ fun rangoAnioActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     return RangoFecha(ini, fin, fmt.format(Date(ini)))
 }
 
-/** Helper para obtener el rango a partir del filtro seleccionado. */
+// Helper para obtener el rango a partir del filtro seleccionado.
 fun rangoPorFiltro(
     filtro: FiltroPeriodo,
     locale: Locale = Locale("es", "ES")
@@ -111,11 +110,6 @@ fun rangoPorFiltro(
     FiltroPeriodo.ANIO   -> rangoAnioActual(locale)
 }
 
-/**
- * NumberFormat memorizado por código de moneda y locale.
- * Cuando cambie `currencyCode` o `locale`, Compose recompone y el símbolo/normas
- * de formateo se actualizan automáticamente.
- */
 @Composable
 fun rememberCurrencyFormatter(
     currencyCode: String,

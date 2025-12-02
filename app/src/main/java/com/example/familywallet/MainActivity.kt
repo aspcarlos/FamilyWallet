@@ -42,9 +42,8 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
-// ----------------------------
+
 // Rutas
-// ----------------------------
 sealed class Ruta(val route: String) {
     data object Login : Ruta("login")
     data object Registro : Ruta("registro")
@@ -78,7 +77,7 @@ sealed class Ruta(val route: String) {
     }
 }
 
-// === COLORES PERSONALIZADOS PARA EL TEMA CLARO ===
+// COLORES PERSONALIZADOS PARA EL TEMA CLARO
 private val LightGreenBackground = Color(0xFFE8F5E9)   // verde muy claro
 private val DarkGreenPrimary     = Color(0xFF2E7D32)   // verde más oscuro para texto/botones
 
@@ -108,7 +107,7 @@ private val CustomLightColorScheme = lightColorScheme(
     outline = DarkGreenPrimary
 )
 
-// === FUENTES PERSONALIZADAS ===
+// FUENTES PERSONALIZADAS
 private val TitleFontFamily = FontFamily(
     Font(R.font.telma_variable, weight = FontWeight.Normal)
 )
@@ -243,7 +242,6 @@ fun AppNav(
         }
 
         // CONFIG FAMILIA
-        // Config familia
         composable(Ruta.ConfigFamilia.route) {
             PantallaConfigFamilia(
                 vm = familiaVM,
@@ -403,7 +401,7 @@ fun AppNav(
             )
         }
 
-        // ADD GASTO
+        // GASTO
         composable(
             route = Ruta.AddGasto.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })
@@ -419,7 +417,7 @@ fun AppNav(
             )
         }
 
-        // ADD INGRESO
+        // INGRESO
         composable(
             route = Ruta.AddIngreso.route,
             arguments = listOf(navArgument("familiaId") { type = NavType.StringType })

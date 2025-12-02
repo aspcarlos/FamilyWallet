@@ -28,7 +28,7 @@ fun PantallaConfigFamilia(
     var mostrarConfirmSalir    by remember { mutableStateOf(false) }
     var error                  by remember { mutableStateOf<String?>(null) }
 
-    // 🔴 IMPORTANTE: arrancar la escucha en tiempo real
+    // arrancar la escucha en tiempo real
     LaunchedEffect(Unit) { vm.observarMiFamilia() }
 
     // ¿Soy admin de mi familia actual?

@@ -36,12 +36,6 @@ private fun FechaCorta(millis: Long): String {
     return fmt.format(Date(millis))
 }
 
-/**
- * Devuelve:
- *  - título: la categoría o "Gasto"/"Ingreso"
- *  - nota:   primero intenta mov.nota; si está vacía, intenta extraer
- *            del viejo formato "Categoria · Nota" almacenado en categoria.
- */
 private fun tituloYNota(mov: Movimiento): Pair<String, String?> {
     val titulo = when (mov.tipo) {
         Movimiento.Tipo.GASTO   -> mov.categoria ?: "Gasto"
@@ -93,7 +87,6 @@ fun PantallaHistorialMes(
                 .fillMaxSize()
                 .padding(inner)
         ) {
-            // flecha atrás arriba
             IconButton(
                 onClick = onBack,
                 modifier = Modifier.align(Alignment.TopStart)
@@ -111,7 +104,6 @@ fun PantallaHistorialMes(
                     .fillMaxWidth(0.9f)
             ) {
 
-                // TÍTULO CENTRADO
                 Text(
                     text = "Detalle • $year/$month",
                     style = MaterialTheme.typography.headlineSmall,
@@ -177,7 +169,7 @@ fun PantallaHistorialMes(
                                 Spacer(Modifier.weight(1f))
                             }
 
-                            // DERECHA: importe (también verde oscuro)
+                            // DERECHA: importe
                             val sign = if (mov.tipo == Movimiento.Tipo.GASTO) -1 else 1
                             Text(
                                 text = formatter.format(sign * kotlin.math.abs(mov.cantidad)),

@@ -223,7 +223,6 @@ fun PantallaInicio(
                 )
             }
 
-            // Contenido centrado
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally

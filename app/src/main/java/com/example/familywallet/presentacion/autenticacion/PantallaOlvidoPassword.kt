@@ -10,7 +10,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.familywallet.ui.validarEmail
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -25,7 +24,7 @@ fun PantallaOlvidoPassword(
     var enviado by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
 
-    // NUEVO: flag para no mostrar error al entrar
+    // flag para no mostrar error al entrar
     var emailTouched by remember { mutableStateOf(false) }
 
     val rawEmailError = validarEmail(email)

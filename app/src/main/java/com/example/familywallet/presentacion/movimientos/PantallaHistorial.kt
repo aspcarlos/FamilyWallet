@@ -39,7 +39,7 @@ fun PantallaHistorial(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { /* título centrado en el cuerpo */ },
+                title = {  },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")

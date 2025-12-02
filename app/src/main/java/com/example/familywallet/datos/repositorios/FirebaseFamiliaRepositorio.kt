@@ -45,7 +45,7 @@ class FirebaseFamiliaRepositorio(
             }
         }
 
-        // Listener principal: usuarios/{uid}
+        // Listener principal
         val regUser = db.collection("usuarios").document(uid)
             .addSnapshotListener { snap, err ->
                 if (err != null) return@addSnapshotListener
@@ -53,7 +53,7 @@ class FirebaseFamiliaRepositorio(
                 emitIfChanged(fam)
             }
 
-        // Respaldo: es owner
+        // Respaldo
         val regOwner = db.collection("familias")
             .whereEqualTo("ownerUid", uid)
             .limit(1)

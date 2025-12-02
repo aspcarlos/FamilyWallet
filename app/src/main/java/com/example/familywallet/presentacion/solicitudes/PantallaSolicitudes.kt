@@ -60,7 +60,6 @@ fun PantallaSolicitudes(
     ScreenScaffold(
         topBar = {
             TopAppBar(
-                // Título visual va en el body, aquí lo dejamos vacío
                 title = { },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
@@ -78,7 +77,6 @@ fun PantallaSolicitudes(
         ) {
 
             if (pendientes.isEmpty()) {
-                // Estado vacío: título + mensaje, todo CENTRADO
                 val msg = if (error.isNullOrBlank())
                     "No hay solicitudes."
                 else
@@ -100,7 +98,6 @@ fun PantallaSolicitudes(
                     )
                 }
             } else {
-                // Lista + título centrado horizontalmente; todo el bloque centrado verticalmente
                 val itemsUi = remember(pendientes) {
                     pendientes.map { s -> SolicitudUi(id = s.id, alias = s.alias, uid = s.uid) }
                 }

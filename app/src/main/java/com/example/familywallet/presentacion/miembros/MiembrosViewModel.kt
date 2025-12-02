@@ -32,7 +32,7 @@ class MiembrosViewModel(
             familiaRepo.expulsarMiembro(familiaId, uid)
         } finally {
             _procesando.value = null
-            cargar(familiaId) // refresca
+            cargar(familiaId)
         }
     }
 }

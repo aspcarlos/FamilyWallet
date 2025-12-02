@@ -29,7 +29,6 @@ fun PantallaUnirseFamilia(
             .fillMaxSize()
             .padding(horizontal = 24.dp)
     ) {
-        // Contenido centrado
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -37,7 +36,6 @@ fun PantallaUnirseFamilia(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Título centrado
             Text(
                 text = "Unirse a una familia",
                 style = MaterialTheme.typography.headlineSmall,

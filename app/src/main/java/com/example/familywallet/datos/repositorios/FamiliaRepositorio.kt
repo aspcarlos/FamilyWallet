@@ -18,7 +18,7 @@ interface FamiliaRepositorio {
 
     suspend fun nombreDe(familiaId: String): String?
 
-    // lookup rápido (lectura puntual)
+    // lookup rápido
     suspend fun miFamiliaId(uid: String): String?
 
     suspend fun crearFamilia(

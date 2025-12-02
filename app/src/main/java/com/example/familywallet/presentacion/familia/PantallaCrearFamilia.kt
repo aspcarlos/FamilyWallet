@@ -37,7 +37,6 @@ fun PantallaCrearFamilia(
             Text("Atrás")
         }
 
-        // Contenido centrado
         Column(
             modifier = Modifier
                 .align(Alignment.Center)

@@ -17,7 +17,7 @@ class FirebaseMovimientoRepositorio(
 
     private val movimientosCol = db.collection("movimientos")
 
-    // --------- helpers ---------
+    // helpers
 
     private fun docToMovimiento(d: DocumentSnapshot): Movimiento? {
         val tipoStr = d.getString("tipo") ?: return null
@@ -30,13 +30,13 @@ class FirebaseMovimientoRepositorio(
             familiaId   = familiaId,
             cantidad    = d.getDouble("cantidad") ?: 0.0,
             categoria   = d.getString("categoria"),
-            nota        = d.getString("nota"),     // ⬅ leemos la nota
+            nota        = d.getString("nota"),
             fechaMillis = fecha,
             tipo        = tipo
         )
     }
 
-    // --------- consultas ---------
+    // consultas
 
     override suspend fun movimientosDeMes(
         familiaId: String,
@@ -92,16 +92,16 @@ class FirebaseMovimientoRepositorio(
         }
     }
 
-    // --------- escritura ---------
+    // escritura
 
     override suspend fun agregarMovimiento(m: Movimiento): Movimiento {
         val data = mapOf(
             "familiaId"   to m.familiaId,
             "cantidad"    to m.cantidad,
             "categoria"   to m.categoria,
-            "nota"        to m.nota,               // ⬅ guardamos la nota
+            "nota"        to m.nota,
             "fechaMillis" to m.fechaMillis,
-            "tipo"        to m.tipo.name           // "GASTO" / "INGRESO"
+            "tipo"        to m.tipo.name
         )
 
         val ref = movimientosCol.add(data).await()
@@ -113,12 +113,12 @@ class FirebaseMovimientoRepositorio(
         movimientosCol.document(id).delete().await()
     }
 
-    // --------- tiempo real ---------
+    // tiempo real
 
     override fun observarMovimientosFamilia(
         familiaId: String
     ): Flow<List<Movimiento>> = callbackFlow {
-        // IMPORTANTE: misma colección que usamos para guardar ("movimientos")
+        // misma colección que usamos para guardar ("movimientos")
         val listener = movimientosCol
             .whereEqualTo("familiaId", familiaId)
             .addSnapshotListener { snapshot, error ->

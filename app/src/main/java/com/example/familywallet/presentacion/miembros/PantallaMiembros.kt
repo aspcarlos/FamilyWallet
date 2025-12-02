@@ -31,7 +31,7 @@ fun PantallaMiembros(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { /* título visual va en el body */ },
+                title = {  },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")

@@ -26,14 +26,9 @@ class FamiliaViewModel(
     private val _cargando = MutableStateFlow(false)
     val cargando: StateFlow<Boolean> = _cargando
 
-    /**
-     * Empieza (sólo una vez) a escuchar en tiempo real el id de mi familia.
-     * Se llama desde PantallaConfigFamilia y desde MembershipGuard.
-     */
     fun observarMiFamilia() {
         val uid = authRepo.usuarioActualUid ?: return
 
-        // Ya hay un listener activo → no lo duplicamos
         if (observeJob != null) return
 
         observeJob = familiaRepo
@@ -50,7 +45,6 @@ class FamiliaViewModel(
         _cargando.value = true
         try {
             familiaRepo.salirDeFamilia(familiaId, uid)
-            // observarMiFamiliaId pondrá miFamiliaId = null automáticamente
         } finally {
             _cargando.value = false
         }
@@ -66,7 +60,7 @@ class FamiliaViewModel(
         }
     }
 
-    /** Crea la familia y devuelve el id del documento creado. */
+    // Crea la familia y devuelve el id del documento creado.
     suspend fun crearFamilia(nombre: String, aliasOwner: String): String =
         withContext(Dispatchers.IO) {
             val ownerUid = authRepo.usuarioActualUid

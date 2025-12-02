@@ -70,7 +70,6 @@ fun PantallaAgregarGasto(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Flecha atrás
         IconButton(
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart)
@@ -82,8 +81,6 @@ fun PantallaAgregarGasto(
             )
         }
 
-
-        // Contenido centrado
         Column(
             modifier = Modifier
                 .align(Alignment.Center)

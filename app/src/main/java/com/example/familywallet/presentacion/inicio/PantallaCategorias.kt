@@ -45,7 +45,7 @@ fun PantallaCategorias(
                     ultimaFecha = lista.maxOfOrNull { it.fechaMillis } ?: 0L
                 )
             }
-            // 👇 Orden: categoría cuyo gasto sea más reciente, primero
+            // categoría cuyo gasto sea más reciente, primero
             .sortedByDescending { it.ultimaFecha }
     }
 

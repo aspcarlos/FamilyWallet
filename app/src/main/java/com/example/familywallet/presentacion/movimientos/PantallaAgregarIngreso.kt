@@ -64,7 +64,6 @@ fun PantallaAgregarIngreso(
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Flecha atrás arriba a la izquierda
         IconButton(
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart)
@@ -76,7 +75,6 @@ fun PantallaAgregarIngreso(
             )
         }
 
-        // CONTENIDO CENTRADO
         Column(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -144,7 +142,7 @@ fun PantallaAgregarIngreso(
                             vm.agregarIngreso(
                                 familiaId = familiaId,
                                 cantidad = cantidad,
-                                categoria = null,   // ingresos SIN categoría
+                                categoria = null,
                                 nota = nota,
                                 fechaMillis = fecha
                             )

@@ -13,11 +13,7 @@ fun validarEmail(email: String): String? {
     }
 }
 
-/**
- * - Mínimo 8 caracteres (Firebase deja 6, pero aquí lo elevamos)
- * - Al menos una minúscula, una mayúscula, un dígito y un símbolo
- * - Sin espacios
- */
+
 fun validarPassword(pass: String): String? {
     if (pass.isBlank()) return "La contraseña es obligatoria"
     if (pass.length < 8) return "Mínimo 8 caracteres"
