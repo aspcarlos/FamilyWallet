@@ -18,7 +18,7 @@ class MiembrosViewModel(
     private val _ownerUid = MutableStateFlow<String?>(null)
     val ownerUid: StateFlow<String?> = _ownerUid
 
-    private val _procesando = MutableStateFlow<String?>(null) // uid en expulsión
+    private val _procesando = MutableStateFlow<String?>(null)
     val procesando: StateFlow<String?> = _procesando
 
     fun cargar(familiaId: String) = viewModelScope.launch {

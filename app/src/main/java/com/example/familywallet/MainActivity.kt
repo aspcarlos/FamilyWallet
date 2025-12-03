@@ -107,7 +107,7 @@ sealed class Ruta(val route: String) {
     }
 }
 
-// ==== Tema claro (verde)
+// Tema claro (verde)
 private val LightGreenBackground = Color(0xFFE8F5E9)
 private val DarkGreenPrimary     = Color(0xFF2E7D32)
 
@@ -136,7 +136,7 @@ private val CustomLightColorScheme = lightColorScheme(
     outline          = DarkGreenPrimary
 )
 
-// ==== Tipografías
+// Tipografías
 private val TitleFontFamily  = FontFamily(Font(R.font.telma_variable,  weight = FontWeight.Normal))
 private val ButtonFontFamily = FontFamily(Font(R.font.ranade_variable, weight = FontWeight.Normal))
 private val BodyFontFamily   = FontFamily(Font(R.font.ranade_variable, weight = FontWeight.Normal))
