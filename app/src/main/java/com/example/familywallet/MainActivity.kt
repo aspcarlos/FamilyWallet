@@ -207,7 +207,7 @@ fun AppNav(
         navController = nav,
         startDestination = Ruta.Login.route
     ) {
-        // Movimientos (opcional)
+        // Movimientos
         composable(
             route = Ruta.Movimientos.route,
             arguments = listOf(navArgument(Ruta.Movimientos.ARG) { type = NavType.StringType })
