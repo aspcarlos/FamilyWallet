@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.example.familywallet.datos.modelos.CATEGORIAS_GASTO
 import com.example.familywallet.presentacion.familia.FamiliaViewModel
 import com.example.familywallet.presentacion.ui.MembershipGuard
 import kotlinx.coroutines.launch
@@ -36,14 +37,18 @@ fun PantallaAgregarGasto(
 
     var cantidadTxt by remember { mutableStateOf("") }
     var categoriaTxt by remember { mutableStateOf("") }
-    var notaTxt      by remember { mutableStateOf("") }
+    var notaTxt by remember { mutableStateOf("") }
 
-    var cantidadError  by remember { mutableStateOf<String?>(null) }
+    var cantidadError by remember { mutableStateOf<String?>(null) }
     var categoriaError by remember { mutableStateOf<String?>(null) }
-    var generalError   by remember { mutableStateOf<String?>(null) }
-    var cargando       by remember { mutableStateOf(false) }
+    var generalError by remember { mutableStateOf<String?>(null) }
+    var cargando by remember { mutableStateOf(false) }
 
-    val categoriasSugeridas = listOf("Comida","Transporte","Casa","Ocio","Salud","Educación","Otros")
+    // ✅ Usamos la constante centralizada
+    val categoriasSugeridas = remember {
+        // Si quieres "Otros" como opción final:
+        CATEGORIAS_GASTO + "Otros"
+    }
 
     fun validar(): Boolean {
         var ok = true
@@ -89,9 +94,11 @@ fun PantallaAgregarGasto(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
-            Text("Añadir gasto",
+            Text(
+                "Añadir gasto",
                 style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.primary)
+                color = MaterialTheme.colorScheme.primary
+            )
 
             // Cantidad
             OutlinedTextField(
@@ -104,7 +111,9 @@ fun PantallaAgregarGasto(
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 isError = cantidadError != null,
-                supportingText = { cantidadError?.let { Text(it, color = MaterialTheme.colorScheme.error) } }
+                supportingText = {
+                    cantidadError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
             )
 
             // Categoría desplegable obligatoria
@@ -120,16 +129,21 @@ fun PantallaAgregarGasto(
                         if (categoriaError != null) categoriaError = null
                     },
                     label = { Text("Categoría") },
-                    modifier = Modifier.menuAnchor().fillMaxWidth(),
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
                     isError = categoriaError != null,
                     singleLine = true,
-                    supportingText = { categoriaError?.let { Text(it, color = MaterialTheme.colorScheme.error) } }
+                    supportingText = {
+                        categoriaError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    }
                 )
+
                 ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
-                    containerColor = MaterialTheme.colorScheme.background // verde claro
+                    containerColor = MaterialTheme.colorScheme.background
                 ) {
                     categoriasSugeridas.forEach { cat ->
                         DropdownMenuItem(
@@ -155,7 +169,11 @@ fun PantallaAgregarGasto(
             )
 
             generalError?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    it,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
 
             Spacer(Modifier.height(8.dp))
@@ -186,13 +204,16 @@ fun PantallaAgregarGasto(
                     }
                 },
                 enabled = puedeGuardar,
-                modifier = Modifier.fillMaxWidth().height(48.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
             ) {
                 Text(if (cargando) "Guardando..." else "Guardar gasto")
             }
         }
     }
 }
+
 
 
 
