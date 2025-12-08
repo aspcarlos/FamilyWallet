@@ -2,6 +2,7 @@ package com.example.familywallet.presentacion.movimientos
 
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
@@ -30,9 +31,9 @@ class MovimientosViewModel(
     // Estado que lee Compose
     var monedaActual by mutableStateOf("EUR")
         private set
-    var totalIngresos by mutableStateOf(0.0)
+    var totalIngresos by mutableDoubleStateOf(0.0)
         private set
-    var totalGastos by mutableStateOf(0.0)
+    var totalGastos by mutableDoubleStateOf(0.0)
         private set
     var etiquetaPeriodo by mutableStateOf("")
         private set
