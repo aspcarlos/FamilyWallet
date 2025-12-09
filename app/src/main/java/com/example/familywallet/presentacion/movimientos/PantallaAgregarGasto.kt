@@ -26,30 +26,33 @@ fun PantallaAgregarGasto(
     onBack: () -> Unit,
     onExpulsado: () -> Unit
 ) {
-    // Control de expulsión
+    // Evita que un usuario expulsado siga en la pantalla de la familia.
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
         onExpulsado = onExpulsado
     )
 
+    // Scope para lanzar corrutinas desde la UI.
     val scope = rememberCoroutineScope()
 
+    // Estados del formulario.
     var cantidadTxt by remember { mutableStateOf("") }
     var categoriaTxt by remember { mutableStateOf("") }
     var notaTxt by remember { mutableStateOf("") }
 
+    // Estados de error y carga.
     var cantidadError by remember { mutableStateOf<String?>(null) }
     var categoriaError by remember { mutableStateOf<String?>(null) }
     var generalError by remember { mutableStateOf<String?>(null) }
     var cargando by remember { mutableStateOf(false) }
 
-    // ✅ Usamos la constante centralizada
+    // Lista de categorías centralizada para no duplicar strings en varias pantallas.
     val categoriasSugeridas = remember {
-        // Si quieres "Otros" como opción final:
         CATEGORIAS_GASTO + "Otros"
     }
 
+    // Validación simple de cantidad y categoría obligatoria.
     fun validar(): Boolean {
         var ok = true
         cantidadError = null
@@ -68,6 +71,7 @@ fun PantallaAgregarGasto(
         return ok
     }
 
+    // Habilita guardar solo si hay datos mínimos y no está cargando.
     val puedeGuardar = !cargando && cantidadTxt.isNotBlank() && categoriaTxt.isNotBlank()
 
     Box(
@@ -75,6 +79,7 @@ fun PantallaAgregarGasto(
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        // Botón de volver.
         IconButton(
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart)
@@ -94,13 +99,14 @@ fun PantallaAgregarGasto(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
+            // Título de la pantalla.
             Text(
                 "Añadir gasto",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
 
-            // Cantidad
+            // Campo de cantidad numérica.
             OutlinedTextField(
                 value = cantidadTxt,
                 onValueChange = {
@@ -116,7 +122,7 @@ fun PantallaAgregarGasto(
                 }
             )
 
-            // Categoría desplegable obligatoria
+            // Selector de categoría usando ExposedDropdownMenu.
             var expanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = expanded,
@@ -158,7 +164,7 @@ fun PantallaAgregarGasto(
                 }
             }
 
-            // Nota (opcional)
+            // Campo opcional de nota.
             OutlinedTextField(
                 value = notaTxt,
                 onValueChange = { notaTxt = it },
@@ -168,6 +174,7 @@ fun PantallaAgregarGasto(
                 maxLines = 3
             )
 
+            // Muestra un error general si falla el guardado.
             generalError?.let {
                 Text(
                     it,
@@ -178,6 +185,7 @@ fun PantallaAgregarGasto(
 
             Spacer(Modifier.height(8.dp))
 
+            // Guarda el gasto en el repositorio vía ViewModel.
             Button(
                 onClick = {
                     if (!validar()) return@Button
@@ -213,6 +221,7 @@ fun PantallaAgregarGasto(
         }
     }
 }
+
 
 
 

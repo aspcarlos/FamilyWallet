@@ -13,6 +13,8 @@ import com.example.familywallet.ui.validarEmail
 import com.example.familywallet.ui.validarPassword
 import com.example.familywallet.ui.validarConfirmacion
 
+// Pantalla de registro de usuario.
+// Recoge email/contraseña, valida campos y delega el alta en AuthViewModel.
 @Composable
 fun PantallaRegistro(
     authVM: AuthViewModel,
@@ -21,17 +23,20 @@ fun PantallaRegistro(
 ) {
     val scope = rememberCoroutineScope()
 
+    // Estados del formulario.
     var email by remember { mutableStateOf("") }
     var pass by remember { mutableStateOf("") }
     var pass2 by remember { mutableStateOf("") }
     var showPass by remember { mutableStateOf(false) }
     var cargando by remember { mutableStateOf(false) }
 
+    // Errores específicos y error general.
     var generalError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passError by remember { mutableStateOf<String?>(null) }
     var pass2Error by remember { mutableStateOf<String?>(null) }
 
+    // Valida email, contraseña y confirmación usando helpers comunes.
     fun validar(): Boolean {
         val e = email.trim()
 
@@ -64,13 +69,12 @@ fun PantallaRegistro(
 
                 Spacer(Modifier.height(24.dp))
 
-                // EMAIL
+                // Campo de EMAIL.
                 OutlinedTextField(
                     value = email,
                     onValueChange = {
                         email = it
-                        // Si quieres validar al escribir:
-                        emailError = null
+                        emailError = null // limpia el error al escribir
                     },
                     label = { Text("Correo") },
                     enabled = !cargando,
@@ -88,13 +92,10 @@ fun PantallaRegistro(
 
                 Spacer(Modifier.height(12.dp))
 
-                // PASSWORD
+                // Campo de CONTRASEÑA.
                 OutlinedTextField(
                     value = pass,
-                    onValueChange = {
-                        pass = it
-                        // passError = null  // si quieres limpiar al escribir
-                    },
+                    onValueChange = { pass = it },
                     label = { Text("Contraseña") },
                     visualTransformation = if (showPass)
                         VisualTransformation.None
@@ -115,13 +116,10 @@ fun PantallaRegistro(
 
                 Spacer(Modifier.height(12.dp))
 
-                // CONFIRMACIÓN PASSWORD
+                // Campo de CONFIRMACIÓN de contraseña.
                 OutlinedTextField(
                     value = pass2,
-                    onValueChange = {
-                        pass2 = it
-                        // pass2Error = null
-                    },
+                    onValueChange = { pass2 = it },
                     label = { Text("Repetir contraseña") },
                     visualTransformation = if (showPass)
                         VisualTransformation.None
@@ -140,6 +138,7 @@ fun PantallaRegistro(
                     )
                 }
 
+                // Toggle mostrar/ocultar contraseñas.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -149,7 +148,7 @@ fun PantallaRegistro(
                     }
                 }
 
-                // Error general (por ejemplo, Firebase, backend, etc.)
+                // Error general de registro (Firebase/Backend).
                 generalError?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -160,6 +159,7 @@ fun PantallaRegistro(
 
                 Spacer(Modifier.height(16.dp))
 
+                // Botón principal: valida y llama a authVM.registrar().
                 Button(
                     onClick = {
                         if (!validar()) return@Button
@@ -190,6 +190,7 @@ fun PantallaRegistro(
 
                 Spacer(Modifier.height(12.dp))
 
+                // Volver al login.
                 TextButton(
                     onClick = onVolverLogin,
                     enabled = !cargando
@@ -200,6 +201,7 @@ fun PantallaRegistro(
         }
     }
 }
+
 
 
 

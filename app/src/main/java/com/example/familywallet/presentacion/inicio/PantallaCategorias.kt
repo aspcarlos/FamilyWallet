@@ -17,10 +17,11 @@ import com.example.familywallet.presentacion.movimientos.MovimientosViewModel
 import com.example.familywallet.presentacion.ui.ScreenScaffold
 import com.example.familywallet.presentacion.ui.rememberCurrencyFormatter
 
+// Modelo interno de UI para resumir gastos por categoría.
 private data class CategoriaResumen(
-    val nombreCompleto: String,
-    val total: Double,
-    val ultimaFecha: Long
+    val nombreCompleto: String, // Nombre guardado en el movimiento (puede incluir compatibilidad "Categoria · Nota").
+    val total: Double,          // Suma total de gastos de esa categoría en el periodo cargado.
+    val ultimaFecha: Long       // Fecha más reciente encontrada para ordenar por "más nuevo".
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -29,26 +30,29 @@ fun PantallaCategorias(
     vm: MovimientosViewModel,
     onBack: () -> Unit
 ) {
+    // Formateador de moneda según la moneda actual del ViewModel.
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
+
+    // Lista de movimientos del periodo activo (mes/rango) ya cargado por el VM.
     val items by vm.itemsDelMesState
 
-    // Agrupamos igual que antes, pero ahora calculamos también la fecha más reciente
+    // Genera el resumen de categorías solo cuando cambia la lista de movimientos.
     val totalesPorCategoria = remember(items) {
         items
             .asSequence()
-            .filter { it.tipo == Movimiento.Tipo.GASTO }
-            .groupBy { it.categoria ?: "Otros" }
+            .filter { it.tipo == Movimiento.Tipo.GASTO }     // Solo gastos.
+            .groupBy { it.categoria ?: "Otros" }             // Agrupa por categoría.
             .map { (categoriaCompleta, lista) ->
                 CategoriaResumen(
                     nombreCompleto = categoriaCompleta,
-                    total = lista.sumOf { it.cantidad },
-                    ultimaFecha = lista.maxOfOrNull { it.fechaMillis } ?: 0L
+                    total = lista.sumOf { it.cantidad },     // Suma de importes.
+                    ultimaFecha = lista.maxOfOrNull { it.fechaMillis } ?: 0L // Último gasto.
                 )
             }
-            // categoría cuyo gasto sea más reciente, primero
-            .sortedByDescending { it.ultimaFecha }
+            .sortedByDescending { it.ultimaFecha }          // Ordena por gasto más reciente.
     }
 
+    // Scaffold común de la app con barra superior y botón de volver.
     ScreenScaffold(
         topBar = {
             TopAppBar(
@@ -66,6 +70,7 @@ fun PantallaCategorias(
                 .fillMaxSize()
                 .padding(inner)
         ) {
+            // Título centrado de pantalla.
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -79,6 +84,7 @@ fun PantallaCategorias(
                 )
             }
 
+            // Estado vacío si no hay gastos en el periodo.
             if (totalesPorCategoria.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -87,12 +93,14 @@ fun PantallaCategorias(
                     Text("No hay gastos en este periodo.")
                 }
             } else {
+                // Lista de categorías con su total formateado.
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     items(totalesPorCategoria, key = { it.nombreCompleto }) { cat ->
+                        // Limpia el nombre por compatibilidad con formato antiguo "Categoria · Nota".
                         val nombreVisible = cat.nombreCompleto
                             .substringBefore(" · ")
                             .ifBlank { "Otros" }
@@ -101,7 +109,7 @@ fun PantallaCategorias(
                             headlineContent = { Text(nombreVisible) },
                             trailingContent = {
                                 Text(
-                                    text = formatter.format(cat.total),
+                                    text = formatter.format(cat.total), // Muestra total por categoría.
                                     style = MaterialTheme.typography.bodyMedium
                                 )
                             }
@@ -113,6 +121,7 @@ fun PantallaCategorias(
         }
     }
 }
+
 
 
 

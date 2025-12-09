@@ -11,14 +11,17 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 
+// Implementación real de MovimientoRepositorio usando Firestore.
+// Gestiona lectura por rangos, inserción, borrado y escucha en tiempo real.
 class FirebaseMovimientoRepositorio(
-    private val db: FirebaseFirestore
+    db: FirebaseFirestore
 ) : MovimientoRepositorio {
 
+    // Colección donde se guardan ingresos y gastos.
     private val movimientosCol = db.collection("movimientos")
 
-    // helpers
-
+    // Convierte un documento de Firestore en un Movimiento de la app.
+    // Garantiza que existan campos clave (tipo, fecha, familiaId).
     private fun docToMovimiento(d: DocumentSnapshot): Movimiento? {
         val tipoStr = d.getString("tipo") ?: return null
         val tipo = runCatching { Movimiento.Tipo.valueOf(tipoStr) }.getOrNull() ?: return null
@@ -36,8 +39,7 @@ class FirebaseMovimientoRepositorio(
         )
     }
 
-    // consultas
-
+    // Obtiene los movimientos de un mes concreto calculando inicio y fin del mes.
     override suspend fun movimientosDeMes(
         familiaId: String,
         year: Int,
@@ -59,6 +61,8 @@ class FirebaseMovimientoRepositorio(
         return movimientosEntre(familiaId, inicio, fin)
     }
 
+    // Devuelve movimientos dentro de un rango de fechas ordenados por fecha descendente.
+    // Incluye fallback si falta el índice compuesto de Firestore.
     override suspend fun movimientosEntre(
         familiaId: String,
         inicioMillis: Long,
@@ -76,7 +80,7 @@ class FirebaseMovimientoRepositorio(
             snap.documents.mapNotNull { docToMovimiento(it) }
         } catch (e: FirebaseFirestoreException) {
             if (e.code == FirebaseFirestoreException.Code.FAILED_PRECONDITION) {
-                // índice aún sin crear -> fallback sin orderBy
+                // Si el índice no existe, consulta sin orderBy y ordena localmente.
                 val snap = movimientosCol
                     .whereEqualTo("familiaId", familiaId)
                     .get()
@@ -92,8 +96,7 @@ class FirebaseMovimientoRepositorio(
         }
     }
 
-    // escritura
-
+    // Inserta un movimiento en Firestore y devuelve el mismo movimiento con id generado.
     override suspend fun agregarMovimiento(m: Movimiento): Movimiento {
         val data = mapOf(
             "familiaId"   to m.familiaId,
@@ -108,17 +111,17 @@ class FirebaseMovimientoRepositorio(
         return m.copy(id = ref.id)
     }
 
+    // Elimina un movimiento por id en Firestore.
+    // familiaId se mantiene por compatibilidad con el contrato.
     override suspend fun eliminarMovimiento(familiaId: String, id: String) {
-        // familiaId no hace falta, se mantiene por compatibilidad
         movimientosCol.document(id).delete().await()
     }
 
-    // tiempo real
-
+    // Escucha en tiempo real todos los movimientos de una familia.
+    // Emite una lista cada vez que Firestore detecta cambios.
     override fun observarMovimientosFamilia(
         familiaId: String
     ): Flow<List<Movimiento>> = callbackFlow {
-        // misma colección que usamos para guardar ("movimientos")
         val listener = movimientosCol
             .whereEqualTo("familiaId", familiaId)
             .addSnapshotListener { snapshot, error ->
@@ -138,6 +141,7 @@ class FirebaseMovimientoRepositorio(
         awaitClose { listener.remove() }
     }
 }
+
 
 
 

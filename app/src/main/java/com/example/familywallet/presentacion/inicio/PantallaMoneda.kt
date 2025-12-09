@@ -19,16 +19,21 @@ fun PantallaMoneda(
     onGuardar: (String) -> Unit,
     onBack: () -> Unit
 ) {
+    // Lista de monedas disponibles para el selector.
     val opciones = listOf("EUR","USD","GBP","JPY","MXN")
 
+    // Controla si el menú desplegable está abierto.
     var menuAbierto by remember { mutableStateOf(false) }
+    // Guarda la selección del usuario y sobrevive a recomposiciones/config changes.
     var seleccion by rememberSaveable { mutableStateOf(vm.monedaActual) }
 
+    // Scaffold común para mantener estilo y topbar consistentes en la app.
     ScreenScaffold(
         topBar = {
             TopAppBar(
                 title = { },
                 navigationIcon = {
+                    // Botón de volver a la pantalla anterior.
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
                     }
@@ -37,6 +42,7 @@ fun PantallaMoneda(
         }
     ) { padding ->
         Column(
+            // Layout central con padding del scaffold y espaciado interno.
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
@@ -44,18 +50,22 @@ fun PantallaMoneda(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // Título principal de la pantalla.
             Text(
                 text = "Cambiar moneda",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
 
+            // Muestra la moneda que está usando actualmente el ViewModel.
             Text("Moneda actual: ${vm.monedaActual}")
 
+            // Abre el menú para elegir una nueva moneda.
             Button(onClick = { menuAbierto = true }) {
                 Text("Seleccionar nueva moneda (${seleccion})")
             }
 
+            // Menú desplegable con las opciones predefinidas.
             DropdownMenu(
                 expanded = menuAbierto,
                 onDismissRequest = { menuAbierto = false },
@@ -65,6 +75,7 @@ fun PantallaMoneda(
                     DropdownMenuItem(
                         text = { Text(code) },
                         onClick = {
+                            // Actualiza la selección local sin aplicar aún el cambio real.
                             seleccion = code
                             menuAbierto = false
                         }
@@ -72,8 +83,10 @@ fun PantallaMoneda(
                 }
             }
 
+            // Confirma el cambio: delega la persistencia/aplicación al callback.
             Button(
                 onClick = { onGuardar(seleccion) },
+                // Solo se habilita si la moneda elegida es distinta a la actual.
                 enabled = seleccion != vm.monedaActual
             ) {
                 Text("Guardar cambios")
@@ -81,6 +94,7 @@ fun PantallaMoneda(
         }
     }
 }
+
 
 
 

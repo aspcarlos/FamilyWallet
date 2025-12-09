@@ -29,22 +29,27 @@ fun PantallaAgregarIngreso(
     onBack: () -> Unit,
     onExpulsado: () -> Unit
 ) {
-    // Control de expulsión
+    // Comprueba en tiempo real si el usuario sigue perteneciendo a la familia.
+    // Si no pertenece, ejecuta onExpulsado para redirigir fuera.
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
         onExpulsado = onExpulsado
     )
 
+    // Scope para lanzar corrutinas desde la UI.
     val scope = rememberCoroutineScope()
 
+    // Estados del formulario.
     var cantidadTxt by remember { mutableStateOf("") }
-    var notaTxt      by remember { mutableStateOf("") }
+    var notaTxt by remember { mutableStateOf("") }
 
+    // Estados de error y carga.
     var cantidadError by remember { mutableStateOf<String?>(null) }
-    var generalError  by remember { mutableStateOf<String?>(null) }
-    var cargando      by remember { mutableStateOf(false) }
+    var generalError by remember { mutableStateOf<String?>(null) }
+    var cargando by remember { mutableStateOf(false) }
 
+    // Valida que la cantidad sea numérica y mayor que 0.
     fun validar(): Boolean {
         cantidadError = null
         generalError = null
@@ -57,6 +62,7 @@ fun PantallaAgregarIngreso(
         return true
     }
 
+    // Habilita guardar solo si hay cantidad y no está cargando.
     val puedeGuardar = !cargando && cantidadTxt.isNotBlank()
 
     Box(
@@ -64,6 +70,7 @@ fun PantallaAgregarIngreso(
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        // Botón de volver.
         IconButton(
             onClick = onBack,
             modifier = Modifier.align(Alignment.TopStart)
@@ -83,14 +90,14 @@ fun PantallaAgregarIngreso(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
 
+            // Título de la pantalla.
             Text(
                 text = "Añadir ingreso",
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.primary
             )
 
-
-            // CANTIDAD
+            // Campo de cantidad.
             OutlinedTextField(
                 value = cantidadTxt,
                 onValueChange = {
@@ -108,7 +115,7 @@ fun PantallaAgregarIngreso(
                 }
             )
 
-            // NOTA (OPCIONAL)
+            // Campo opcional de nota.
             OutlinedTextField(
                 value = notaTxt,
                 onValueChange = { notaTxt = it },
@@ -118,6 +125,7 @@ fun PantallaAgregarIngreso(
                 maxLines = 3
             )
 
+            // Muestra un error general si falla el guardado.
             generalError?.let {
                 Text(
                     text = it,
@@ -128,6 +136,8 @@ fun PantallaAgregarIngreso(
 
             Spacer(Modifier.height(8.dp))
 
+            // Guarda el ingreso usando el ViewModel.
+            // Usa categoria = null porque los ingresos no requieren categoría.
             Button(
                 onClick = {
                     if (!validar()) return@Button
@@ -159,11 +169,13 @@ fun PantallaAgregarIngreso(
                     .fillMaxWidth()
                     .height(48.dp)
             ) {
+                // Texto cambia según estado de carga.
                 Text(if (cargando) "Guardando..." else "Guardar ingreso")
             }
         }
     }
 }
+
 
 
 

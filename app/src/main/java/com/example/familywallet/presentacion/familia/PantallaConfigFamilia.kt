@@ -19,19 +19,22 @@ fun PantallaConfigFamilia(
     onUnirse: () -> Unit,
     onLogout: () -> Unit
 ) {
+    // Scope para lanzar corrutinas desde la UI.
     val scope = rememberCoroutineScope()
 
+    // Estado observado desde el ViewModel.
     val miFamiliaId by vm.miFamiliaId.collectAsState(initial = null)
     val cargando   by vm.cargando.collectAsState(initial = false)
 
+    // Estados locales para diálogos y mensajes de error.
     var mostrarConfirmEliminar by remember { mutableStateOf(false) }
     var mostrarConfirmSalir    by remember { mutableStateOf(false) }
     var error                  by remember { mutableStateOf<String?>(null) }
 
-    // arrancar la escucha en tiempo real
+    // Inicia la escucha en tiempo real del id de familia del usuario.
     LaunchedEffect(Unit) { vm.observarMiFamilia() }
 
-    // ¿Soy admin de mi familia actual?
+    // Calcula si el usuario actual es admin de la familia mostrada.
     var esAdmin by remember(miFamiliaId) { mutableStateOf(false) }
     LaunchedEffect(miFamiliaId) {
         val famId = miFamiliaId
@@ -57,6 +60,7 @@ fun PantallaConfigFamilia(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // Título principal de la pantalla.
                 Text(
                     text = "Configuración Familia",
                     style = MaterialTheme.typography.headlineSmall,
@@ -64,24 +68,26 @@ fun PantallaConfigFamilia(
                 )
 
                 if (miFamiliaId.isNullOrEmpty()) {
-                    // NO está en ninguna familia
+                    // Caso 1: el usuario NO pertenece a ninguna familia.
                     if (cargando) {
                         CircularProgressIndicator()
                     } else {
                         Spacer(Modifier.height(8.dp))
 
+                        // Navega a la pantalla de creación de familia.
                         Button(
                             onClick = onCrear,
                             modifier = Modifier.fillMaxWidth(0.8f)
                         ) { Text("Crear familia") }
 
+                        // Navega a la pantalla para enviar solicitud de unión.
                         Button(
                             onClick = onUnirse,
                             modifier = Modifier.fillMaxWidth(0.8f)
                         ) { Text("Unirse a familia") }
                     }
                 } else {
-                    // SÍ está en una familia
+                    // Caso 2: el usuario SÍ pertenece a una familia.
                     Button(
                         onClick = { miFamiliaId?.let(onIrALaFamilia) },
                         enabled = !cargando,
@@ -89,14 +95,14 @@ fun PantallaConfigFamilia(
                     ) { Text("Ir a mi familia") }
 
                     if (esAdmin) {
-                        // CREADOR / ADMIN → puede ELIMINAR la familia
+                        // Si es admin, puede eliminar toda la familia.
                         Button(
                             onClick = { mostrarConfirmEliminar = true },
                             enabled = !cargando,
                             modifier = Modifier.fillMaxWidth(0.8f)
                         ) { Text("Eliminar familia") }
                     } else {
-                        // MIEMBRO NORMAL → puede SALIR de la familia
+                        // Si es miembro, puede salir de la familia.
                         Button(
                             onClick = { mostrarConfirmSalir = true },
                             enabled = !cargando,
@@ -105,6 +111,7 @@ fun PantallaConfigFamilia(
                     }
                 }
 
+                // Muestra errores de acciones de familia.
                 error?.let {
                     Text(
                         text = it,
@@ -114,6 +121,7 @@ fun PantallaConfigFamilia(
                 }
             }
 
+            // Botón de logout global de la app.
             Button(
                 onClick = onLogout,
                 enabled = !cargando,
@@ -125,6 +133,7 @@ fun PantallaConfigFamilia(
                 Text("Cerrar sesión")
             }
 
+            // Overlay de carga para bloquear acciones mientras hay operación.
             if (cargando) {
                 Box(
                     modifier = Modifier
@@ -136,6 +145,7 @@ fun PantallaConfigFamilia(
                 }
             }
 
+            // Diálogo de confirmación para eliminar familia (solo admin).
             if (mostrarConfirmEliminar) {
                 AlertDialog(
                     onDismissRequest = { mostrarConfirmEliminar = false },
@@ -165,6 +175,7 @@ fun PantallaConfigFamilia(
                 )
             }
 
+            // Diálogo de confirmación para salir de familia (miembro).
             if (mostrarConfirmSalir) {
                 AlertDialog(
                     onDismissRequest = { mostrarConfirmSalir = false },
@@ -196,6 +207,7 @@ fun PantallaConfigFamilia(
         }
     }
 }
+
 
 
 

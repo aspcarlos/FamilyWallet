@@ -10,16 +10,17 @@ import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
 
-// Filtros para la barra de “Día / Semana / Mes / Año”
+// Enum para representar el filtro de periodo elegido en la app
 enum class FiltroPeriodo { DIA, SEMANA, MES, ANIO }
 
+// Modelo simple para un rango de fechas con etiqueta de UI
 data class RangoFecha(
     val inicio: Long,
     val fin: Long,
     val etiqueta: String
 )
 
-// Calendario base consistente (lunes como inicio de semana).
+// Crea un Calendar base consistente (lunes como inicio de semana)
 private fun calBase(
     tz: TimeZone = TimeZone.getDefault(),
     locale: Locale = Locale("es", "ES")
@@ -27,14 +28,16 @@ private fun calBase(
     firstDayOfWeek = Calendar.MONDAY
 }
 
-// Rango del día actual
+// Devuelve el rango del día actual en millis + etiqueta legible
 fun rangoDiaActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     val c = calBase(locale = locale)
+    // Ajusta al inicio del día
     c.set(Calendar.HOUR_OF_DAY, 0)
     c.set(Calendar.MINUTE, 0)
     c.set(Calendar.SECOND, 0)
     c.set(Calendar.MILLISECOND, 0)
     val ini = c.timeInMillis
+    // Fin del día = justo antes de empezar el siguiente
     c.add(Calendar.DAY_OF_MONTH, 1)
     val fin = c.timeInMillis - 1
 
@@ -42,19 +45,20 @@ fun rangoDiaActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     return RangoFecha(ini, fin, fmt.format(Date(ini)))
 }
 
-// Rango de la semana actual (lunes 00:00 … domingo 23:59).
+// Devuelve el rango de la semana actual (lunes a domingo) + etiqueta
 fun rangoSemanaActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     val c = calBase(locale = locale)
+    // Ajusta al inicio del día
     c.set(Calendar.HOUR_OF_DAY, 0)
     c.set(Calendar.MINUTE, 0)
     c.set(Calendar.SECOND, 0)
     c.set(Calendar.MILLISECOND, 0)
 
-    // inicio semana (lunes)
+    // Fuerza inicio en lunes
     c.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
     val ini = c.timeInMillis
 
-    // fin semana (domingo)
+    // Fin de semana = 7 días después menos 1 ms
     c.add(Calendar.DAY_OF_MONTH, 7)
     val fin = c.timeInMillis - 1
 
@@ -63,9 +67,10 @@ fun rangoSemanaActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     return RangoFecha(ini, fin, etiqueta)
 }
 
-// Rango del mes actual (1er día 00:00 … último día 23:59).
+// Devuelve el rango del mes actual completo + etiqueta del mes
 fun rangoMesActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     val c = calBase(locale = locale)
+    // Primer día del mes a las 00:00
     c.set(Calendar.DAY_OF_MONTH, 1)
     c.set(Calendar.HOUR_OF_DAY, 0)
     c.set(Calendar.MINUTE, 0)
@@ -73,6 +78,7 @@ fun rangoMesActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     c.set(Calendar.MILLISECOND, 0)
     val ini = c.timeInMillis
 
+    // Fin de mes = inicio del mes siguiente menos 1 ms
     c.add(Calendar.MONTH, 1)
     val fin = c.timeInMillis - 1
 
@@ -81,9 +87,10 @@ fun rangoMesActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     return RangoFecha(ini, fin, etiqueta)
 }
 
-// Rango del año actual
+// Devuelve el rango del año actual completo + etiqueta del año
 fun rangoAnioActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     val c = calBase(locale = locale)
+    // 1 de enero a las 00:00
     c.set(Calendar.MONTH, Calendar.JANUARY)
     c.set(Calendar.DAY_OF_MONTH, 1)
     c.set(Calendar.HOUR_OF_DAY, 0)
@@ -92,6 +99,7 @@ fun rangoAnioActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     c.set(Calendar.MILLISECOND, 0)
     val ini = c.timeInMillis
 
+    // Fin de año = inicio del siguiente año menos 1 ms
     c.add(Calendar.YEAR, 1)
     val fin = c.timeInMillis - 1
 
@@ -99,7 +107,7 @@ fun rangoAnioActual(locale: Locale = Locale("es", "ES")): RangoFecha {
     return RangoFecha(ini, fin, fmt.format(Date(ini)))
 }
 
-// Helper para obtener el rango a partir del filtro seleccionado.
+// Mapea el filtro elegido a su rango concreto
 fun rangoPorFiltro(
     filtro: FiltroPeriodo,
     locale: Locale = Locale("es", "ES")
@@ -110,17 +118,20 @@ fun rangoPorFiltro(
     FiltroPeriodo.ANIO   -> rangoAnioActual(locale)
 }
 
+// Crea y memoriza un formateador de moneda para no recrearlo en cada recomposición
 @Composable
 fun rememberCurrencyFormatter(
     currencyCode: String,
     locale: Locale = Locale.getDefault()
 ): NumberFormat {
     return remember(currencyCode, locale) {
+        // Devuelve formato local con la divisa seleccionada
         NumberFormat.getCurrencyInstance(locale).apply {
             currency = Currency.getInstance(currencyCode)
         }
     }
 }
+
 
 
 

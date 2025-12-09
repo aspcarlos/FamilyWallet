@@ -12,12 +12,17 @@ import com.google.firebase.auth.ktx.auth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
+// ViewModel de autenticación.
+// Centraliza el registro, login con control de dispositivo, logout y reset de contraseña.
 class AuthViewModel(
     private val repo: AuthRepositorio
 ) : ViewModel() {
 
+    // Acceso directo a FirebaseAuth para operaciones de registro y reset.
     private val auth = Firebase.auth
 
+    // Registra un usuario con email y contraseña,
+    // envía verificación por correo y cierra sesión para forzar confirmación.
     fun registrar(
         email: String,
         pass: String,
@@ -30,6 +35,7 @@ class AuthViewModel(
             auth.signOut()
             onOk()
         } catch (e: Exception) {
+            // Traduce errores típicos de Firebase a mensajes claros para la UI.
             val msg = when (e) {
                 is FirebaseAuthUserCollisionException ->
                     "Ya existe una cuenta con este correo."
@@ -43,6 +49,8 @@ class AuthViewModel(
         }
     }
 
+    // Inicia sesión usando el repositorio,
+    // que aplica la regla de “una cuenta por dispositivo”.
     fun login(
         email: String,
         pass: String,
@@ -54,6 +62,7 @@ class AuthViewModel(
             repo.login(email, pass, deviceId)
             onOk()
         } catch (e: Exception) {
+            // Mensaje especial si la cuenta ya está activa en otro móvil.
             val msg = when (e.message) {
                 "ACCOUNT_ALREADY_ACTIVE" ->
                     "Esta cuenta ya está iniciada en otro dispositivo."
@@ -63,10 +72,13 @@ class AuthViewModel(
         }
     }
 
+    // Cierra sesión usando el repositorio,
+    // que además marca la sesión como inactiva en Firestore.
     suspend fun logout() {
         repo.logout()
     }
 
+    // Envía un email de restablecimiento de contraseña.
     fun enviarResetPassword(
         email: String,
         onOk: () -> Unit,
@@ -81,6 +93,8 @@ class AuthViewModel(
     }
 }
 
+// Factory para crear AuthViewModel inyectando el repositorio adecuado.
+// Facilita el uso con viewModel() en Compose.
 class AuthViewModelFactory(
     private val repo: AuthRepositorio
 ) : ViewModelProvider.Factory {
@@ -93,6 +107,7 @@ class AuthViewModelFactory(
         throw IllegalArgumentException("Unknown ViewModel class")
     }
 }
+
 
 
 

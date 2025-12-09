@@ -14,6 +14,8 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
+// Pantalla de login en Jetpack Compose.
+// Recoge email/contraseña, valida y llama al AuthViewModel.
 @SuppressLint("HardwareIds")
 @Composable
 fun PantallaLogin(
@@ -22,10 +24,11 @@ fun PantallaLogin(
     onRegistro: () -> Unit,
     onOlvido: () -> Unit
 ) {
+    // Contexto necesario para obtener el ANDROID_ID.
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // ID único del dispositivo
+    // ID único del dispositivo para el control de sesión por móvil.
     val deviceId by remember {
         mutableStateOf(
             Settings.Secure.getString(
@@ -35,22 +38,26 @@ fun PantallaLogin(
         )
     }
 
-    var email by remember { mutableStateOf("") }
-    var pass by remember { mutableStateOf("") }
-    var showPass by remember { mutableStateOf(false) }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    // Estados de formulario.
+    var email by remember { mutableStateOf("") }          // Email introducido.
+    var pass by remember { mutableStateOf("") }           // Contraseña introducida.
+    var showPass by remember { mutableStateOf(false) }    // Alternar mostrar/ocultar contraseña.
+    var loading by remember { mutableStateOf(false) }     // Estado de carga del login.
+    var error by remember { mutableStateOf<String?>(null) } // Error para mostrar en pantalla.
 
+    // Valida el formato de email.
     fun validarEmail(e: String): String? =
         if (e.isBlank()) "El correo es obligatorio"
         else if (!Patterns.EMAIL_ADDRESS.matcher(e).matches()) "Correo no válido"
         else null
 
+    // Valida requisitos mínimos de contraseña para login.
     fun validarPass(p: String): String? =
         if (p.isBlank()) "La contraseña es obligatoria"
         else if (p.length < 6) "Mínimo 6 caracteres"
         else null
 
+    // Estructura base de pantalla.
     Scaffold { inner ->
         Box(
             modifier = Modifier
@@ -60,6 +67,8 @@ fun PantallaLogin(
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+                // Título de pantalla.
                 Text(
                     text = "Iniciar sesión",
                     style = MaterialTheme.typography.titleLarge
@@ -67,6 +76,7 @@ fun PantallaLogin(
 
                 Spacer(Modifier.height(24.dp))
 
+                // Campo email.
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -77,6 +87,7 @@ fun PantallaLogin(
 
                 Spacer(Modifier.height(12.dp))
 
+                // Campo contraseña con opción de mostrar/ocultar.
                 OutlinedTextField(
                     value = pass,
                     onValueChange = { pass = it },
@@ -89,6 +100,7 @@ fun PantallaLogin(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                // Botón pequeño para alternar visibilidad de contraseña.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
@@ -98,6 +110,7 @@ fun PantallaLogin(
                     }
                 }
 
+                // Muestra error si existe.
                 error?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -108,9 +121,10 @@ fun PantallaLogin(
 
                 Spacer(Modifier.height(16.dp))
 
+                // Botón principal de login.
                 Button(
                     onClick = {
-                        // Validación rápida
+                        // Validación rápida antes de llamar al ViewModel.
                         val errEmail = validarEmail(email.trim())
                         val errPass = validarPass(pass)
 
@@ -123,9 +137,11 @@ fun PantallaLogin(
                             return@Button
                         }
 
+                        // Estado de carga.
                         loading = true
                         error = null
 
+                        // Llama al login del ViewModel con control por deviceId.
                         scope.launch {
                             authVM.login(
                                 email = email.trim(),
@@ -150,6 +166,7 @@ fun PantallaLogin(
 
                 Spacer(Modifier.height(12.dp))
 
+                // Navega a recuperación de contraseña.
                 TextButton(
                     onClick = onOlvido,
                     enabled = !loading
@@ -157,6 +174,7 @@ fun PantallaLogin(
 
                 Spacer(Modifier.height(8.dp))
 
+                // Navega a registro de cuenta.
                 TextButton(
                     onClick = onRegistro,
                     enabled = !loading
@@ -165,6 +183,7 @@ fun PantallaLogin(
         }
     }
 }
+
 
 
 

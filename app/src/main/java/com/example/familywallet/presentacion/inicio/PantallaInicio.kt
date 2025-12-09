@@ -25,6 +25,7 @@ private fun TriLinesIcon(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurface
 ) {
+    // Icono personalizado de 3 líneas para el menú de periodo.
     Canvas(modifier = modifier.size(24.dp)) {
         val h = size.height
         val w = size.width
@@ -73,35 +74,43 @@ fun PantallaInicio(
     esAdmin: Boolean = false,
     appName: String = "FamilyWallet"
 ) {
-    // Si me expulsan, salgo de la familia
+    // Guard de seguridad: si ya no pertenezco a la familia, me saca a ConfigFamilia.
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
         onExpulsado = onExpulsado
     )
 
-    // Escucha en tiempo real y cargamos por defecto el mes actual
+    // Al entrar o cambiar de familia:
+    // 1) activo listener de movimientos en tiempo real
+    // 2) aplico por defecto el rango del mes actual.
     val locale = Locale("es", "ES")
     LaunchedEffect(familiaId) {
         vm.iniciarEscuchaTiempoReal(familiaId)
         vm.aplicarRango(familiaId, rangoMesActual(locale))
     }
 
-    // Nombre de la familia
+    // Cargo el nombre de la familia para mostrarlo en el título.
     var nombreFamilia by remember(familiaId) { mutableStateOf<String?>(null) }
     LaunchedEffect(familiaId) {
         nombreFamilia = runCatching { ServiceLocator.familiaRepo.nombreDe(familiaId) }.getOrNull()
     }
 
+    // Totales calculados en el ViewModel según el rango seleccionado.
     val ingresos  = vm.totalIngresos
     val gastos    = vm.totalGastos
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
 
+    // Estados de apertura de menús.
     var menuPeriodoAbierto  by remember { mutableStateOf(false) }
     var menuOpcionesAbierto by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
+            // Barra superior principal con:
+            // - nombre app a la izquierda
+            // - menú de periodo
+            // - menú de opciones (3 puntos).
             CenterAlignedTopAppBar(
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
@@ -118,7 +127,7 @@ fun PantallaInicio(
                 },
                 title = {},
                 actions = {
-                    // Menú periodo
+                    // Menú de periodo (día/semana/mes/año).
                     Box {
                         IconButton(onClick = { menuPeriodoAbierto = true }) {
                             TriLinesIcon(color = MaterialTheme.colorScheme.onPrimary)
@@ -161,7 +170,7 @@ fun PantallaInicio(
 
                     Spacer(Modifier.width(4.dp))
 
-                    // Menú 3 puntos
+                    // Menú de opciones generales.
                     Box {
                         IconButton(onClick = { menuOpcionesAbierto = true }) {
                             Icon(Icons.Default.MoreVert, contentDescription = "Más opciones")
@@ -184,6 +193,7 @@ fun PantallaInicio(
                                 onClick = { menuOpcionesAbierto = false; onCambiarMoneda() }
                             )
 
+                            // Solo el admin ve el acceso a solicitudes.
                             if (esAdmin) {
                                 Divider()
                                 DropdownMenuItem(
@@ -209,7 +219,7 @@ fun PantallaInicio(
                 .padding(inner)
                 .padding(horizontal = 24.dp)
         ) {
-            // Flecha atrás debajo de la barra superior
+            // Botón de volver a la pantalla de configuración familiar.
             IconButton(
                 onClick = onBackToConfig,
                 modifier = Modifier
@@ -223,10 +233,12 @@ fun PantallaInicio(
                 )
             }
 
+            // Contenido central con el resumen económico y accesos principales.
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Nombre de la familia.
                 Text(
                     text = "Familia ${nombreFamilia.orEmpty()}".trim(),
                     style = MaterialTheme.typography.titleLarge,
@@ -236,6 +248,7 @@ fun PantallaInicio(
 
                 Spacer(Modifier.height(24.dp))
 
+                // Etiqueta del periodo seleccionado (si no hay, muestra el mes actual).
                 Text(
                     text = vm.etiquetaPeriodo.ifBlank { vm.nombreMesActual() },
                     style = MaterialTheme.typography.titleMedium,
@@ -245,10 +258,13 @@ fun PantallaInicio(
 
                 Spacer(Modifier.height(24.dp))
 
+                // Totales de ingresos y gastos calculados por el VM.
                 Text(text = "Ingresos: ${formatter.format(ingresos)}")
                 Spacer(Modifier.height(8.dp))
                 Text(text = "Gastos: ${formatter.format(gastos)}")
                 Spacer(Modifier.height(8.dp))
+
+                // Resumen neto del periodo.
                 Text(
                     text = "Resumen: ${formatter.format(ingresos - gastos)}",
                     color = if ((ingresos - gastos) >= 0)
@@ -259,10 +275,12 @@ fun PantallaInicio(
 
                 Spacer(Modifier.height(24.dp))
 
+                // Acceso al historial anual/mensual.
                 Button(onClick = onIrHistorial) { Text("Ver historial") }
 
                 Spacer(Modifier.height(24.dp))
 
+                // Accesos rápidos para añadir movimientos.
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -274,6 +292,8 @@ fun PantallaInicio(
         }
     }
 }
+
+
 
 
 

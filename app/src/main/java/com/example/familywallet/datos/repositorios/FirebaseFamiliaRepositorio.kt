@@ -10,18 +10,23 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+// Implementación real de FamiliaRepositorio con Firestore.
+// Gestiona familias, miembros, pertenencia del usuario y borrado en cascada.
 class FirebaseFamiliaRepositorio(
     private val db: FirebaseFirestore
 ) : FamiliaRepositorio {
 
+    // Referencias a colecciones principales usadas por la app.
     private val familias   get() = db.collection("familias")
     private val miembros   get() = db.collection("miembros")
     private val movimientos get() = db.collection("movimientos")
 
+    // Obtiene el owner/admin de una familia a partir del documento familias/{id}.
     override suspend fun ownerUidDe(familiaId: String): String? = try {
         familias.document(familiaId).get().await().getString("ownerUid")
     } catch (_: Exception) { null }
 
+    // Lista los miembros de una familia leyendo "miembros" y mapeando a Miembro.
     override suspend fun miembrosDe(familiaId: String): List<Miembro> = try {
         miembros.whereEqualTo("familiaId", familiaId)
             .get().await().documents.map { d ->
@@ -34,10 +39,12 @@ class FirebaseFamiliaRepositorio(
             }
     } catch (_: Exception) { emptyList() }
 
-
-    // === MI FAMILIA (REALTIME) ===
+    // Observa en tiempo real la familia del usuario.
+    // Usa 3 listeners de respaldo: usuarios, familias(owner) y miembros.
     override fun observarMiFamiliaId(uid: String): Flow<String?> = callbackFlow {
         var last: String? = null
+
+        // Evita emitir el mismo id repetido.
         fun emitIfChanged(n: String?) {
             if (n != last) {
                 last = n
@@ -45,7 +52,7 @@ class FirebaseFamiliaRepositorio(
             }
         }
 
-        // Listener principal
+        // Fuente principal: usuarios/{uid}.familiaId
         val regUser = db.collection("usuarios").document(uid)
             .addSnapshotListener { snap, err ->
                 if (err != null) return@addSnapshotListener
@@ -53,7 +60,7 @@ class FirebaseFamiliaRepositorio(
                 emitIfChanged(fam)
             }
 
-        // Respaldo
+        // Respaldo: si el usuario es owner en familias/.
         val regOwner = db.collection("familias")
             .whereEqualTo("ownerUid", uid)
             .limit(1)
@@ -63,7 +70,7 @@ class FirebaseFamiliaRepositorio(
                 emitIfChanged(fam?.takeUnless { it.isBlank() })
             }
 
-        // Respaldo: es miembro
+        // Respaldo: si el usuario aparece como miembro en miembros/.
         val regMember = db.collection("miembros")
             .whereEqualTo("uid", uid)
             .limit(1)
@@ -76,6 +83,7 @@ class FirebaseFamiliaRepositorio(
                 emitIfChanged(fam)
             }
 
+        // Libera listeners al cerrar el flow.
         awaitClose {
             regUser.remove()
             regOwner.remove()
@@ -83,6 +91,7 @@ class FirebaseFamiliaRepositorio(
         }
     }
 
+    // Expulsa a un miembro: elimina su documento en miembros y borra familiaId en usuarios/{uid}.
     override suspend fun expulsarMiembro(familiaId: String, uidMiembro: String) {
         val miembrosCol = db.collection("miembros")
         val usuario     = db.collection("usuarios").document(uidMiembro)
@@ -97,8 +106,8 @@ class FirebaseFamiliaRepositorio(
         }.await()
     }
 
+    // Salir de familia: borra su entrada en miembros y limpia familiaId en usuarios/{uid}.
     override suspend fun salirDeFamilia(familiaId: String, uid: String) {
-        // 1) borrar entrada en miembros/
         val miembrosCol = db.collection("miembros")
         val miembroDoc = miembrosCol.whereEqualTo("familiaId", familiaId)
             .whereEqualTo("uid", uid)
@@ -110,7 +119,6 @@ class FirebaseFamiliaRepositorio(
 
         db.runBatch { b ->
             miembroDoc?.let { b.delete(it.reference) }
-            // 2) quitar referencia en usuarios/{uid}
             b.update(
                 db.collection("usuarios").document(uid),
                 mapOf("familiaId" to FieldValue.delete())
@@ -118,10 +126,13 @@ class FirebaseFamiliaRepositorio(
         }.await()
     }
 
+    // Devuelve el nombre guardado en familias/{id}.
     override suspend fun nombreDe(familiaId: String): String? = try {
         familias.document(familiaId).get().await().getString("nombre")
     } catch (_: Exception) { null }
 
+    // Búsqueda rápida del id de familia del usuario.
+    // Prioriza usuarios/{uid}.familiaId, luego owner, luego miembro.
     override suspend fun miFamiliaId(uid: String): String? {
         val snap = db.collection("usuarios").document(uid).get().await()
         val fam = snap.getString("familiaId")
@@ -139,6 +150,8 @@ class FirebaseFamiliaRepositorio(
         return miembro
     }
 
+    // Crea una familia, registra al owner como admin en miembros
+    // y guarda familiaId en usuarios/{ownerUid}.
     override suspend fun crearFamilia(
         nombre: String,
         ownerUid: String,
@@ -171,8 +184,9 @@ class FirebaseFamiliaRepositorio(
         return ref.id
     }
 
+    // Elimina una familia limpiando primero referencias en usuarios,
+    // luego borrando movimientos y miembros asociados, y finalmente el documento familia.
     override suspend fun eliminarFamilia(familiaId: String) {
-        // limpiar familiaId en usuarios miembros
         val miembrosSnap = miembros
             .whereEqualTo("familiaId", familiaId)
             .get()
@@ -195,6 +209,7 @@ class FirebaseFamiliaRepositorio(
         familias.document(familiaId).delete().await()
     }
 
+    // Borrado paginado por campo para evitar límites de batch.
     private suspend fun deleteByFieldPaged(
         col: com.google.firebase.firestore.CollectionReference,
         field: String,
@@ -211,16 +226,19 @@ class FirebaseFamiliaRepositorio(
         }
     }
 
+    // Busca una familia por su nombre exacto y devuelve su id.
     override suspend fun buscarFamiliaPorNombre(nombre: String): String? {
         val q = familias.whereEqualTo("nombre", nombre).limit(1).get().await()
         return q.documents.firstOrNull()?.id
     }
 
+    // Comprueba si el uid es el owner de la familia.
     override suspend fun esAdmin(familiaId: String, uid: String): Boolean {
         val d = familias.document(familiaId).get().await()
         return d.getString("ownerUid") == uid
     }
 }
+
 
 
 

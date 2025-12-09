@@ -16,19 +16,23 @@ import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.Locale
 
+/**
+ * ViewModel principal de la parte económica.
+ * Gestiona lista de movimientos, totales, filtros de periodo y conversión de moneda.
+ */
 class MovimientosViewModel(
     private val repo: MovimientoRepositorio
 ) : ViewModel() {
 
-    // Lista usada en pantallas de historial
+    // Lista usada en pantallas de historial/detalle.
     private val _itemsDelMesState = mutableStateOf<List<Movimiento>>(emptyList())
     val itemsDelMesState: State<List<Movimiento>> get() = _itemsDelMesState
 
-    // Error observable
+    // Error observable para mostrar mensajes en UI.
     private val _errorMsg = mutableStateOf<String?>(null)
     val errorMsg: State<String?> get() = _errorMsg
 
-    // Estado que lee Compose
+    // Estado que leen las pantallas Compose.
     var monedaActual by mutableStateOf("EUR")
         private set
     var totalIngresos by mutableDoubleStateOf(0.0)
@@ -40,12 +44,12 @@ class MovimientosViewModel(
     var filtroPeriodo by mutableStateOf(FiltroPeriodo.MES)
         private set
 
-    // Rango seleccionado (día, semana, mes, año)
+    // Último rango aplicado (día/semana/mes/año) para recargas coherentes.
     private var ultimoRango: RangoFecha? = null
     private var yearActual: Int = 0
     private var monthActual: Int = 0
 
-    // Conversión simple offline
+    // Conversión simple offline para demo sin dependencias externas.
     private val conversionRates = mapOf(
         "EUR" to 1.0,
         "USD" to 1.08,
@@ -54,12 +58,16 @@ class MovimientosViewModel(
         "MXN" to 19.5
     )
 
-    // Última lista recibida por el listener
+    // Cache de movimientos recibidos por el listener en tiempo real.
     private var movimientosTiempoReal: List<Movimiento> = emptyList()
 
-    // Job para poder cancelar la escucha al cambiar de familia / destruir VM
+    // Job para cancelar la escucha cuando cambia la familia o se destruye el VM.
     private var escuchaJob: Job? = null
 
+    /**
+     * Inicia un listener en tiempo real para todos los movimientos de una familia.
+     * Cada actualización recalcula los totales según el rango actual.
+     */
     fun iniciarEscuchaTiempoReal(familiaId: String) {
         escuchaJob?.cancel()
 
@@ -71,22 +79,25 @@ class MovimientosViewModel(
         }
     }
 
+    /**
+     * Aplica un rango de fechas y actualiza etiqueta.
+     * Si hay tiempo real activo, recalcula desde cache; si no, carga desde repositorio.
+     */
     fun aplicarRango(familiaId: String, rango: RangoFecha) {
         etiquetaPeriodo = rango.etiqueta
         ultimoRango = rango
 
         if (movimientosTiempoReal.isNotEmpty()) {
-            // Inicio con tiempo real
             recomputarTotalesTiempoReal()
         } else {
-            // Historial sin escucha
             cargarRango(familiaId, rango.inicio, rango.fin)
         }
     }
 
-
-    // Recalcula ingresos/gastos usando la lista en tiempo real y el rango seleccionado.
-
+    /**
+     * Recalcula ingresos y gastos usando la lista en memoria del tiempo real.
+     * Si no hay rango seleccionado, usa el mes actual calculado localmente.
+     */
     private fun recomputarTotalesTiempoReal() {
         val lista = movimientosTiempoReal
         val rango = ultimoRango
@@ -94,7 +105,6 @@ class MovimientosViewModel(
         val filtrados = if (rango != null) {
             lista.filter { it.fechaMillis in rango.inicio..rango.fin }
         } else {
-            // Si no hay rango seleccionado, usamos el mes actual
             val inicioFin = rangoMesActualMillis()
             lista.filter { it.fechaMillis in inicioFin.first..inicioFin.second }
         }
@@ -108,11 +118,19 @@ class MovimientosViewModel(
             .sumOf { it.cantidad }
     }
 
+    /**
+     * Actualiza la lista principal usada por pantallas de historial.
+     * Tras setear, recalcula totales en base a esa lista.
+     */
     private fun setItems(nuevos: List<Movimiento>) {
         _itemsDelMesState.value = nuevos
         recomputarTotalesLista()
     }
 
+    /**
+     * Recalcula totales leyendo directamente la lista de items del mes/rango.
+     * Se usa cuando no dependemos del flujo en tiempo real.
+     */
     private fun recomputarTotalesLista() {
         val lista = _itemsDelMesState.value
         totalIngresos =
@@ -121,13 +139,21 @@ class MovimientosViewModel(
             lista.filter { it.tipo == Movimiento.Tipo.GASTO }.sumOf { it.cantidad }
     }
 
-    // cargas
+    // ---------------- CARGAS ----------------
 
+    /**
+     * Carga el mes actual del calendario del dispositivo.
+     * Útil como estado inicial cuando el usuario entra a la familia.
+     */
     fun cargarMesActual(familiaId: String) {
         val cal = Calendar.getInstance()
         cargarMes(familiaId, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1)
     }
 
+    /**
+     * Carga movimientos de un mes concreto desde el repositorio.
+     * Guarda year/month para mantener coherencia en futuras recargas.
+     */
     fun cargarMes(familiaId: String, year: Int, month: Int) {
         yearActual = year
         monthActual = month
@@ -143,6 +169,10 @@ class MovimientosViewModel(
         }
     }
 
+    /**
+     * Carga movimientos entre dos fechas en milisegundos.
+     * Se usa para filtros de día/semana/mes/año.
+     */
     fun cargarRango(familiaId: String, inicio: Long, fin: Long) {
         viewModelScope.launch {
             try {
@@ -156,8 +186,12 @@ class MovimientosViewModel(
         }
     }
 
-    // inserciones
+    // ---------------- INSERCIONES ----------------
 
+    /**
+     * Crea y guarda un movimiento de tipo GASTO.
+     * Después recarga el rango/mes actual para reflejar cambios en UI.
+     */
     suspend fun agregarGasto(
         familiaId: String,
         cantidad: Double,
@@ -179,6 +213,10 @@ class MovimientosViewModel(
         recargarDespuesDeInsert(familiaId)
     }
 
+    /**
+     * Crea y guarda un movimiento de tipo INGRESO.
+     * Mantiene el mismo flujo de recarga para consistencia visual.
+     */
     suspend fun agregarIngreso(
         familiaId: String,
         cantidad: Double,
@@ -200,7 +238,10 @@ class MovimientosViewModel(
         recargarDespuesDeInsert(familiaId)
     }
 
-
+    /**
+     * Recarga la pantalla según el último rango aplicado.
+     * Si no hay rango, usa el último mes recordado o el actual.
+     */
     private fun recargarDespuesDeInsert(familiaId: String) {
         val r = ultimoRango
         if (r != null) {
@@ -210,12 +251,17 @@ class MovimientosViewModel(
         }
     }
 
-    // moneda
+    // ---------------- MONEDA ----------------
 
+    /**
+     * Cambia la moneda aplicando un factor de conversión local.
+     * Reescribe la lista actual para que los totales se actualicen automáticamente.
+     */
     fun cambiarMoneda(nueva: String) {
         if (nueva == monedaActual) return
         val factor =
             (conversionRates[nueva] ?: 1.0) / (conversionRates[monedaActual] ?: 1.0)
+
         setItems(
             _itemsDelMesState.value.map {
                 it.copy(cantidad = it.cantidad * factor)
@@ -224,13 +270,21 @@ class MovimientosViewModel(
         monedaActual = nueva
     }
 
-    // cambio de familia
+    // ---------------- CAMBIO DE FAMILIA ----------------
 
+    /**
+     * Se llama cuando el usuario cambia de familia.
+     * Limpia estado y carga el mes actual para la nueva familia.
+     */
     fun onFamiliaCambiada(familiaId: String) {
         resetEstado()
         cargarMesActual(familiaId)
     }
 
+    /**
+     * Limpia caches, totales, filtros y errores.
+     * También cancela el listener en tiempo real activo.
+     */
     private fun resetEstado() {
         escuchaJob?.cancel()
         movimientosTiempoReal = emptyList()
@@ -246,17 +300,24 @@ class MovimientosViewModel(
         _errorMsg.value = null
     }
 
-    // ---------- util ----------
+    // ---------------- UTILIDADES ----------------
 
+    /** Devuelve el año recordado; si no existe, usa el año actual del sistema. */
     private fun yearActualOrNow(): Int =
         if (yearActual == 0) Calendar.getInstance().get(Calendar.YEAR) else yearActual
 
+    /** Devuelve el mes recordado; si no existe, usa el mes actual del sistema. */
     private fun monthActualOrNow(): Int =
         if (monthActual == 0) Calendar.getInstance().get(Calendar.MONTH) + 1 else monthActual
 
+    /**
+     * Calcula inicio y fin del mes actual (según year/month recordados).
+     * Se usa como fallback cuando no se ha seleccionado un rango explícito.
+     */
     private fun rangoMesActualMillis(): Pair<Long, Long> {
         val y = yearActualOrNow()
         val m = monthActualOrNow()
+
         val inicio = Calendar.getInstance().apply {
             set(Calendar.YEAR, y)
             set(Calendar.MONTH, m - 1)
@@ -266,6 +327,7 @@ class MovimientosViewModel(
             set(Calendar.SECOND, 0)
             set(Calendar.MILLISECOND, 0)
         }.timeInMillis
+
         val fin = Calendar.getInstance().apply {
             set(Calendar.YEAR, y)
             set(Calendar.MONTH, m - 1)
@@ -275,9 +337,12 @@ class MovimientosViewModel(
             set(Calendar.SECOND, 59)
             set(Calendar.MILLISECOND, 999)
         }.timeInMillis
+
         return inicio to fin
     }
 
+
+    // Devuelve un texto “Mes Año” para mostrarlo en UI.
     fun nombreMesActual(): String {
         val y = yearActualOrNow()
         val m = monthActualOrNow()
@@ -286,6 +351,7 @@ class MovimientosViewModel(
             set(Calendar.MONTH, m - 1)
             set(Calendar.DAY_OF_MONTH, 1)
         }
+
         val fmt = java.text.SimpleDateFormat("LLLL yyyy", Locale("es", "ES"))
         return fmt.format(cal.time)
             .replaceFirstChar {
@@ -293,11 +359,13 @@ class MovimientosViewModel(
             }
     }
 
+    // Cancela la escucha en tiempo real al destruir el ViewModel.
     override fun onCleared() {
         super.onCleared()
         escuchaJob?.cancel()
     }
 }
+
 
 
 

@@ -18,11 +18,12 @@ fun PantallaUnirseFamilia(
     onHecho: () -> Unit,
     onAtras: () -> Unit = {}
 ) {
+    // Estados locales del formulario: nombre de familia, alias y control de UI.
     var nombreFamilia by remember { mutableStateOf("") }
     var alias by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var cargando by remember { mutableStateOf(false) }
-    var ok by remember { mutableStateOf(false) }
+    var ok by remember { mutableStateOf(false) } // Indica si la solicitud se envió correctamente.
 
     Box(
         modifier = Modifier
@@ -36,6 +37,7 @@ fun PantallaUnirseFamilia(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Título de la pantalla.
             Text(
                 text = "Unirse a una familia",
                 style = MaterialTheme.typography.headlineSmall,
@@ -44,48 +46,58 @@ fun PantallaUnirseFamilia(
                 color = MaterialTheme.colorScheme.primary
             )
 
+            // Campo para escribir el nombre exacto de la familia a buscar.
             OutlinedTextField(
                 value = nombreFamilia,
-                onValueChange = { nombreFamilia = it },
+                onValueChange = { nombreFamilia = it }, // Actualiza el nombre introducido.
                 label = { Text("Nombre de la familia") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(0.85f)
             )
 
+            // Campo para el alias con el que el usuario quiere aparecer en la familia.
             OutlinedTextField(
                 value = alias,
-                onValueChange = { alias = it },
+                onValueChange = { alias = it }, // Actualiza el alias introducido.
                 label = { Text("Tu alias") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(0.85f)
             )
 
+            // Mensaje de error de validación o del repositorio.
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+
+            // Mensaje informativo si la solicitud se mandó.
             if (ok) Text("Solicitud enviada. Espera la respuesta del administrador.")
 
+            // Botón principal: envía una solicitud de unión usando el ViewModel de solicitudes.
             Button(
                 onClick = {
+                    // Validación básica de campos obligatorios.
                     if (nombreFamilia.isBlank() || alias.isBlank()) {
                         error = "Rellena nombre de familia y alias"
                         return@Button
                     }
+
+                    // Activa loading y limpia error para iniciar el envío.
                     cargando = true
                     error = null
+
                     vm.enviarSolicitudPorNombre(
-                        nombreFamilia = nombreFamilia.trim(),
-                        aliasSolicitante = alias.trim(),
+                        nombreFamilia = nombreFamilia.trim(),   // Busca familia por nombre.
+                        aliasSolicitante = alias.trim(),        // Alias del solicitante.
                         onOk = {
                             cargando = false
                             ok = true
-                            onHecho()
+                            onHecho() // Callback para volver o mostrar siguiente paso.
                         },
                         onError = { msg ->
                             cargando = false
-                            error = msg
+                            error = msg // Muestra el error devuelto por VM/repositorio.
                         }
                     )
                 },
-                enabled = !cargando,
+                enabled = !cargando, // Evita doble click mientras se envía.
                 modifier = Modifier
                     .fillMaxWidth(0.6f)
                     .height(50.dp)
@@ -94,9 +106,9 @@ fun PantallaUnirseFamilia(
             }
         }
 
-        // Botón Atrás abajo a la izquierda, en verde oscuro (usa Button)
+        // Botón de navegación atrás.
         Button(
-            onClick = onAtras,
+            onClick = onAtras, // Vuelve a la pantalla anterior.
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(bottom = 16.dp)
@@ -105,6 +117,7 @@ fun PantallaUnirseFamilia(
         }
     }
 }
+
 
 
 

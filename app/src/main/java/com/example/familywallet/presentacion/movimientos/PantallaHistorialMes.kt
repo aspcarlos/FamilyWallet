@@ -30,23 +30,27 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.abs
 
+// Formatea la fecha del movimiento en un formato corto y legible
 @Composable
 private fun FechaCorta(millis: Long): String {
+    // Se memoriza el formatter para no recrearlo en cada recomposición
     val fmt = remember { SimpleDateFormat("dd MMM yyyy", Locale("es", "ES")) }
     return fmt.format(Date(millis))
 }
 
+// Obtiene un título coherente y una nota opcional para mostrar en el listado
 private fun tituloYNota(mov: Movimiento): Pair<String, String?> {
+    // Título principal según el tipo y la categoría
     val titulo = when (mov.tipo) {
         Movimiento.Tipo.GASTO   -> mov.categoria ?: "Gasto"
         Movimiento.Tipo.INGRESO -> mov.categoria?.takeIf { it.isNotBlank() } ?: "Ingreso"
     }
 
-    // 1) Si hay campo nota, usamos ese
+    // Si existe nota en el campo nuevo, se usa directamente
     val notaCampo = mov.nota?.takeIf { it.isNotBlank() }
     if (notaCampo != null) return titulo to notaCampo
 
-    // 2) Compatibilidad hacia atrás: "Categoria · Nota" en categoria
+    // Compatibilidad con datos antiguos donde la nota iba dentro de la categoría
     val cat = mov.categoria
     val sep = " · "
     if (!cat.isNullOrBlank() && cat.contains(sep)) {
@@ -54,6 +58,7 @@ private fun tituloYNota(mov: Movimiento): Pair<String, String?> {
         return titulo to posibleNota
     }
 
+    // Si no hay nota, devolvemos null
     return titulo to null
 }
 
@@ -68,25 +73,32 @@ fun PantallaHistorialMes(
     onBack: () -> Unit,
     onExpulsado: () -> Unit
 ) {
+    // Evita que un usuario expulsado siga viendo datos de la familia
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
         onExpulsado = onExpulsado
     )
 
-    val items     = vm.itemsDelMesState.value
+    // Lista de movimientos cargados para ese mes
+    val items = vm.itemsDelMesState.value
+
+    // Formateador de moneda según la moneda actual del usuario
     val formatter = rememberCurrencyFormatter(vm.monedaActual)
 
+    // Carga los movimientos del mes cuando cambian familia/año/mes
     LaunchedEffect(familiaId, year, month) {
         vm.cargarMes(familiaId, year, month)
     }
 
+    // Contenedor principal de la pantalla
     Scaffold { inner ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(inner)
         ) {
+            // Botón de volver en la esquina superior izquierda
             IconButton(
                 onClick = onBack,
                 modifier = Modifier.align(Alignment.TopStart)
@@ -98,12 +110,14 @@ fun PantallaHistorialMes(
                 )
             }
 
+            // Contenido centrado con el título y la lista
             Column(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .fillMaxWidth(0.9f)
             ) {
 
+                // Título del detalle del mes seleccionado
                 Text(
                     text = "Detalle • $year/$month",
                     style = MaterialTheme.typography.headlineSmall,
@@ -114,10 +128,12 @@ fun PantallaHistorialMes(
                     color = MaterialTheme.colorScheme.primary
                 )
 
+                // Lista de movimientos del mes
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     items(items) { mov ->
+                        // Calcula cómo mostrar título y nota de forma robusta
                         val (titulo, nota) = tituloYNota(mov)
 
                         Row(
@@ -126,7 +142,7 @@ fun PantallaHistorialMes(
                                 .padding(horizontal = 8.dp, vertical = 12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // IZQUIERDA: fecha + categoría
+                            // Columna izquierda: fecha y categoría/título
                             Column(
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -143,7 +159,7 @@ fun PantallaHistorialMes(
                                 )
                             }
 
-                            // CENTRO: nota
+                            // Zona central: nota si existe
                             if (!nota.isNullOrBlank()) {
                                 Box(
                                     modifier = Modifier.weight(1f),
@@ -166,13 +182,14 @@ fun PantallaHistorialMes(
                                     }
                                 }
                             } else {
+                                // Mantiene alineación visual cuando no hay nota
                                 Spacer(Modifier.weight(1f))
                             }
 
-                            // DERECHA: importe
+                            // Columna derecha: importe con signo según tipo
                             val sign = if (mov.tipo == Movimiento.Tipo.GASTO) -1 else 1
                             Text(
-                                text = formatter.format(sign * kotlin.math.abs(mov.cantidad)),
+                                text = formatter.format(sign * abs(mov.cantidad)),
                                 modifier = Modifier.weight(0.6f),
                                 textAlign = TextAlign.End,
                                 style = MaterialTheme.typography.bodyMedium,
@@ -180,6 +197,7 @@ fun PantallaHistorialMes(
                             )
                         }
 
+                        // Separador entre movimientos
                         Divider()
                     }
                 }
@@ -187,6 +205,7 @@ fun PantallaHistorialMes(
         }
     }
 }
+
 
 
 

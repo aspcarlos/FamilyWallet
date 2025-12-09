@@ -24,23 +24,29 @@ fun PantallaHistorial(
     onBack: () -> Unit,
     onExpulsado: () -> Unit
 ) {
+    // Protege la pantalla: si el usuario ya no pertenece a la familia actual, redirige
     MembershipGuard(
         familiaIdActual = familiaId,
         familiaVM = familiaVM,
         onExpulsado = onExpulsado
     )
 
+    // Obtiene el año actual para mostrar el historial del año en curso
     val year = Calendar.getInstance().get(Calendar.YEAR)
+
+    // Lista de nombres de meses en español para pintar las tarjetas
     val mesesEs = listOf(
         "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
         "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
     )
 
+    // Estructura base con TopAppBar y contenido
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {  },
                 navigationIcon = {
+                    // Botón de vuelta a la pantalla anterior
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
                     }
@@ -49,11 +55,13 @@ fun PantallaHistorial(
         }
     ) { padding ->
 
+        // Contenedor principal de la pantalla
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Columna centrada que contiene título y lista de meses
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -62,6 +70,7 @@ fun PantallaHistorial(
             ) {
                 Spacer(Modifier.height(16.dp))
 
+                // Título del historial con el año actual
                 Text(
                     text = "Historial $year",
                     style = MaterialTheme.typography.headlineSmall,
@@ -71,15 +80,18 @@ fun PantallaHistorial(
 
                 Spacer(Modifier.height(24.dp))
 
+                // Lista de 12 tarjetas, una por cada mes
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
+                    // Genera 12 elementos correspondientes a los meses del año
                     items(12) { idx ->
                         val mesNumero = idx + 1
                         val nombreMes = mesesEs[idx]
 
+                        // Tarjeta clicable que navega al detalle del mes seleccionado
                         ElevatedCard(
                             colors = CardDefaults.elevatedCardColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
@@ -89,6 +101,7 @@ fun PantallaHistorial(
                                 .fillMaxWidth()
                                 .clickable { onAbrirMes(year, mesNumero) }
                         ) {
+                            // Fila con el nombre del mes y un texto de acción
                             Row(
                                 Modifier
                                     .fillMaxWidth()
@@ -105,6 +118,7 @@ fun PantallaHistorial(
         }
     }
 }
+
 
 
 

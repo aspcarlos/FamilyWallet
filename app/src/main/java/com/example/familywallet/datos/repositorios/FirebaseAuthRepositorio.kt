@@ -6,14 +6,19 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.tasks.await
 
+// Implementación real de AuthRepositorio con Firebase Auth + Firestore.
+// Añade control de sesión única por dispositivo mediante la colección "userSessions".
 class FirebaseAuthRepositorio : AuthRepositorio {
 
     private val auth = FirebaseAuth.getInstance()
     private val db   = FirebaseFirestore.getInstance()
 
+    // Devuelve el UID del usuario autenticado actualmente en Firebase.
     override val usuarioActualUid: String?
         get() = auth.currentUser?.uid
 
+    // Inicia sesión con email/password y valida que no haya otra sesión activa en otro dispositivo.
+    // Si la cuenta está activa con un deviceId distinto, lanza "ACCOUNT_ALREADY_ACTIVE".
     override suspend fun login(
         email: String,
         pass: String,
@@ -43,6 +48,7 @@ class FirebaseAuthRepositorio : AuthRepositorio {
         }.await()
     }
 
+    // Cierra sesión marcando la sesión como inactiva en Firestore y haciendo signOut en Firebase Auth.
     override suspend fun logout() {
         val uid = auth.currentUser?.uid
         if (uid != null) {
@@ -59,6 +65,7 @@ class FirebaseAuthRepositorio : AuthRepositorio {
         auth.signOut()
     }
 }
+
 
 
 

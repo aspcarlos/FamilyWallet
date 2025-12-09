@@ -13,13 +13,15 @@ import com.example.familywallet.presentacion.ui.ScreenScaffold
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaConfiguracion(
-    isDark: Boolean,
-    onToggleDark: () -> Unit,
-    onBack: () -> Unit,
-    onLogout: () -> Unit
+    isDark: Boolean,            // Estado actual del tema (viene del ThemeViewModel).
+    onToggleDark: () -> Unit,   // Acción para alternar modo claro/oscuro.
+    onBack: () -> Unit,         // Navegación hacia atrás.
+    onLogout: () -> Unit        // Cierre de sesión desde la configuración.
 ) {
+    // Scaffold común para mantener el estilo consistente en toda la app.
     ScreenScaffold(
         topBar = {
+            // Barra superior minimalista con flecha de volver.
             TopAppBar(
                 title = { },
                 navigationIcon = {
@@ -35,6 +37,7 @@ fun PantallaConfiguracion(
                 .padding(padding)
                 .fillMaxSize()
         ) {
+            // Contenido centrado con dos opciones principales.
             Column(
                 modifier = Modifier
                     .align(Alignment.Center)
@@ -42,12 +45,14 @@ fun PantallaConfiguracion(
                 verticalArrangement = Arrangement.spacedBy(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Título de la pantalla.
                 Text(
                     text = "Configuración",
                     style = MaterialTheme.typography.headlineSmall,
                     color = MaterialTheme.colorScheme.primary
                 )
 
+                // Opción de tema oscuro.
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -55,13 +60,14 @@ fun PantallaConfiguracion(
                 ) {
                     Text("Tema oscuro")
                     Switch(
-                        checked = isDark,
-                        onCheckedChange = { onToggleDark() }
+                        checked = isDark,                  // Refleja el estado guardado en DataStore.
+                        onCheckedChange = { onToggleDark() } // Llama al VM para persistir el cambio.
                     )
                 }
 
                 Divider()
 
+                // Botón para cerrar sesión.
                 Button(
                     onClick = onLogout,
                     modifier = Modifier.fillMaxWidth()
@@ -72,6 +78,7 @@ fun PantallaConfiguracion(
         }
     }
 }
+
 
 
 

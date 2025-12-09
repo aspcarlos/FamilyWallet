@@ -43,19 +43,21 @@ import com.google.firebase.ktx.Firebase
 import kotlinx.coroutines.launch
 
 // ----------------------------
-// Rutas
+// Rutas de navegación de la app
 // ----------------------------
 sealed class Ruta(val route: String) {
 
+    // Rutas de autenticación
     data object Login : Ruta("login")
     data object Registro : Ruta("registro")
     data object Recuperar : Ruta("recuperar")
 
+    // Rutas de configuración de familia
     data object ConfigFamilia : Ruta("config_familia")
     data object CrearFamilia  : Ruta("crear_familia")
     data object UnirseFamilia : Ruta("unirse_familia")
 
-    // con argumentos + helper build()
+    // Rutas con argumento familiaId + helper para construir la ruta real
     data object Inicio : Ruta("inicio/{familiaId}") {
         const val ARG = "familiaId"
         fun build(familiaId: String) = "inicio/$familiaId"
@@ -81,6 +83,7 @@ sealed class Ruta(val route: String) {
         fun build(familiaId: String) = "historial/$familiaId"
     }
 
+    // Ruta de detalle mensual con 3 argumentos
     data object HistorialMes : Ruta("historial_mes/{familiaId}/{anio}/{mes}") {
         const val ARG_FAMILIA = "familiaId"
         const val ARG_ANIO    = "anio"
@@ -89,28 +92,32 @@ sealed class Ruta(val route: String) {
             "historial_mes/$familiaId/$anio/$mes"
     }
 
-    // sin argumentos
+    // Rutas simples sin argumentos
     data object Configuracion : Ruta("configuracion")
     data object Categorias    : Ruta("categorias")
     data object Moneda        : Ruta("moneda")
 
-    // Solicitudes (ruta con helper + variante con arg)
+    // Solicitudes: ruta base + variante con arg y helper build
     data object Solicitudes : Ruta("solicitudes") {
         const val ARG = "familiaId"
         val routeWithArg = "$route/{$ARG}"
         fun build(familiaId: String) = "$route/$familiaId"
     }
 
+    // Miembros con familiaId
     data object Miembros : Ruta("miembros/{familiaId}") {
         const val ARG = "familiaId"
         fun build(familiaId: String) = "miembros/$familiaId"
     }
 }
 
-// Tema claro (verde)
+// ----------------------------
+// Tema claro personalizado (paleta verde)
+// ----------------------------
 private val LightGreenBackground = Color(0xFFE8F5E9)
 private val DarkGreenPrimary     = Color(0xFF2E7D32)
 
+// Esquema de colores claro usado por defecto en la app
 private val CustomLightColorScheme = lightColorScheme(
     primary            = DarkGreenPrimary,
     onPrimary          = Color.White,
@@ -136,11 +143,14 @@ private val CustomLightColorScheme = lightColorScheme(
     outline          = DarkGreenPrimary
 )
 
-// Tipografías
+// ----------------------------
+// Tipografías personalizadas
+// ----------------------------
 private val TitleFontFamily  = FontFamily(Font(R.font.telma_variable,  weight = FontWeight.Normal))
 private val ButtonFontFamily = FontFamily(Font(R.font.ranade_variable, weight = FontWeight.Normal))
 private val BodyFontFamily   = FontFamily(Font(R.font.ranade_variable, weight = FontWeight.Normal))
 
+// Mapea familias de fuente a estilos Material3
 val AppTypography = Typography(
     headlineLarge  = Typography().headlineLarge.copy(fontFamily = TitleFontFamily),
     headlineMedium = Typography().headlineMedium.copy(fontFamily = TitleFontFamily),
@@ -159,21 +169,36 @@ val AppTypography = Typography(
     bodySmall  = Typography().bodySmall.copy(fontFamily = BodyFontFamily)
 )
 
+// ----------------------------
+// Activity principal: aplica tema y lanza navegación
+// ----------------------------
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
+
+            // VM del tema que lee DataStore
             val themeVM: ThemeViewModel = viewModel(factory = ThemeVMFactory(application))
+
+            // Estado reactivo de modo oscuro
             val isDark by themeVM.isDark.collectAsState()
+
+            // Selección dinámica de esquema de colores
             val colors = if (isDark) darkColorScheme() else CustomLightColorScheme
 
+            // MaterialTheme global de la app
             MaterialTheme(colorScheme = colors, typography = AppTypography) {
+
+                // Navegación principal + callback para alternar theme
                 AppNav(isDark = isDark, onToggleDark = { themeVM.toggle() })
             }
         }
     }
 }
 
+// ----------------------------
+// Grafo de navegación de Compose
+// ----------------------------
 @Composable
 fun AppNav(
     isDark: Boolean,
@@ -182,20 +207,26 @@ fun AppNav(
     val nav = rememberNavController()
     val scope = rememberCoroutineScope()
 
-    // VMs
+    // ViewModels compartidos a nivel de grafo
+    // Movimientos: lógica de ingresos/gastos e historial
     val movimientosVM: MovimientosViewModel = viewModel(
         factory = MovimientosVMFactory(ServiceLocator.movimientosRepo)
     )
+
+    // Familia: estado de pertenencia y operaciones de familia
     val familiaVM: FamiliaViewModel = viewModel(
         factory = FamiliaVMFactory(
             familiaRepo = ServiceLocator.familiaRepo,
             authRepo    = ServiceLocator.authRepo
         )
     )
+
+    // Auth: login/registro/logout
     val authVM: AuthViewModel = viewModel(
         factory = AuthViewModelFactory(ServiceLocator.authRepo)
     )
 
+    // Navegación de seguridad cuando el usuario deja de pertenecer a la familia
     val goConfigOnKick: () -> Unit = {
         nav.navigate(Ruta.ConfigFamilia.route) {
             popUpTo(nav.graph.startDestinationId) { inclusive = false }
@@ -203,11 +234,15 @@ fun AppNav(
         }
     }
 
+    // Host principal de rutas
     NavHost(
         navController = nav,
         startDestination = Ruta.Login.route
     ) {
-        // Movimientos
+
+        // ----------------------------
+        // Pantalla de Movimientos (no usada actualmente en tu flujo principal)
+        // ----------------------------
         composable(
             route = Ruta.Movimientos.route,
             arguments = listOf(navArgument(Ruta.Movimientos.ARG) { type = NavType.StringType })
@@ -215,13 +250,19 @@ fun AppNav(
             val familiaId = backStack.arguments?.getString(Ruta.Movimientos.ARG) ?: return@composable
             PantallaMovimientos(
                 familiaId = familiaId,
-                onNuevo   = { nav.navigate(Ruta.Movimientos.build(familiaId))
+                onNuevo   = {
+                    // Mantiene la navegación de ejemplo hacia sí misma
+                    nav.navigate(Ruta.Movimientos.build(familiaId))
                 }
             )
         }
 
+        // ----------------------------
         // Login
+        // ----------------------------
         composable(Ruta.Login.route) {
+
+            // Auto-salto si ya hay sesión de Firebase
             LaunchedEffect(Unit) {
                 Firebase.auth.currentUser?.let {
                     nav.navigate(Ruta.ConfigFamilia.route) {
@@ -230,6 +271,8 @@ fun AppNav(
                     }
                 }
             }
+
+            // UI de login y callbacks de navegación
             PantallaLogin(
                 authVM = authVM,
                 onLoginOk   = {
@@ -243,11 +286,14 @@ fun AppNav(
             )
         }
 
+        // ----------------------------
         // Registro
+        // ----------------------------
         composable(Ruta.Registro.route) {
             PantallaRegistro(
                 authVM = authVM,
                 onRegistroOk   = { _, _ ->
+                    // Tras registrar, vuelve al login
                     nav.navigate(Ruta.Login.route) {
                         popUpTo(Ruta.Registro.route) { inclusive = true }
                         launchSingleTop = true
@@ -257,7 +303,9 @@ fun AppNav(
             )
         }
 
-        // Recuperar
+        // ----------------------------
+        // Recuperar contraseña
+        // ----------------------------
         composable(Ruta.Recuperar.route) {
             PantallaOlvidoPassword(
                 authVM = authVM,
@@ -266,11 +314,14 @@ fun AppNav(
             )
         }
 
-        // Config. Familia
+        // ----------------------------
+        // Configuración de familia (puerta de entrada tras login)
+        // ----------------------------
         composable(Ruta.ConfigFamilia.route) {
             PantallaConfigFamilia(
                 vm = familiaVM,
                 onIrALaFamilia = { familiaId ->
+                    // Si ya tengo familia, entro al inicio
                     nav.navigate(Ruta.Inicio.build(familiaId)) {
                         popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
                         launchSingleTop = true
@@ -279,6 +330,7 @@ fun AppNav(
                 onCrear  = { nav.navigate(Ruta.CrearFamilia.route) },
                 onUnirse = { nav.navigate(Ruta.UnirseFamilia.route) },
                 onLogout = {
+                    // Cierra sesión y limpia backstack
                     scope.launch {
                         try { authVM.logout() } finally {
                             nav.navigate(Ruta.Login.route) {
@@ -291,11 +343,14 @@ fun AppNav(
             )
         }
 
+        // ----------------------------
         // Crear familia
+        // ----------------------------
         composable(Ruta.CrearFamilia.route) {
             PantallaCrearFamilia(
                 vm = familiaVM,
                 onHecho = { familiaId ->
+                    // Tras creación, entra al inicio
                     nav.navigate(Ruta.Inicio.build(familiaId)) {
                         popUpTo(Ruta.ConfigFamilia.route) { inclusive = true }
                         launchSingleTop = true
@@ -305,8 +360,12 @@ fun AppNav(
             )
         }
 
-        // Unirse familia
+        // ----------------------------
+        // Unirse a familia (envía solicitud)
+        // ----------------------------
         composable(Ruta.UnirseFamilia.route) {
+
+            // VM local de solicitudes para esta pantalla
             val soliVM: SolicitudesViewModel = viewModel(
                 factory = SolicitudesVMFactory(
                     solicitudesRepo = ServiceLocator.solicitudesRepo,
@@ -314,6 +373,7 @@ fun AppNav(
                     authRepo        = ServiceLocator.authRepo
                 )
             )
+
             PantallaUnirseFamilia(
                 vm = soliVM,
                 onHecho = { nav.popBackStack() },
@@ -321,13 +381,16 @@ fun AppNav(
             )
         }
 
-        // Configuración
+        // ----------------------------
+        // Configuración general (tema + logout)
+        // ----------------------------
         composable(Ruta.Configuracion.route) {
             PantallaConfiguracion(
                 isDark       = isDark,
                 onToggleDark = onToggleDark,
                 onBack       = { nav.popBackStack() },
                 onLogout     = {
+                    // Logout desde ajustes
                     scope.launch {
                         authVM.logout()
                         nav.navigate(Ruta.Login.route) {
@@ -339,35 +402,52 @@ fun AppNav(
             )
         }
 
-        // Moneda / Categorías
+        // ----------------------------
+        // Moneda
+        // ----------------------------
         composable(Ruta.Moneda.route) {
             PantallaMoneda(
                 vm = movimientosVM,
                 onGuardar = { nueva ->
+                    // Cambia moneda en VM y vuelve atrás
                     movimientosVM.cambiarMoneda(nueva)
                     nav.popBackStack()
                 },
                 onBack = { nav.popBackStack() }
             )
         }
+
+        // ----------------------------
+        // Categorías (resumen del mes por categoría)
+        // ----------------------------
         composable(Ruta.Categorias.route) {
-            PantallaCategorias(vm = movimientosVM, onBack = { nav.popBackStack() })
+            PantallaCategorias(
+                vm = movimientosVM,
+                onBack = { nav.popBackStack() }
+            )
         }
 
-        // Miembros
+        // ----------------------------
+        // Miembros (lista + expulsión si admin)
+        // ----------------------------
         composable(
             route = Ruta.Miembros.route,
             arguments = listOf(navArgument(Ruta.Miembros.ARG) { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString(Ruta.Miembros.ARG) ?: return@composable
+
+            // VM específico de miembros
             val vmMiembros: MiembrosViewModel = viewModel(
                 factory = MiembrosVMFactory(familiaRepo = ServiceLocator.familiaRepo)
             )
+
+            // Calcula si el usuario actual es admin de esta familia
             var esAdmin by remember { mutableStateOf(false) }
             LaunchedEffect(familiaId) {
                 val uid = ServiceLocator.authRepo.usuarioActualUid
                 esAdmin = uid != null && ServiceLocator.familiaRepo.esAdmin(familiaId, uid)
             }
+
             PantallaMiembros(
                 familiaId = familiaId,
                 vm = vmMiembros,
@@ -376,13 +456,16 @@ fun AppNav(
             )
         }
 
-        // Inicio
+        // ----------------------------
+        // Inicio de familia (resumen principal)
+        // ----------------------------
         composable(
             route = Ruta.Inicio.route,
             arguments = listOf(navArgument(Ruta.Inicio.ARG) { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString(Ruta.Inicio.ARG) ?: return@composable
 
+            // Determina admin para mostrar opciones avanzadas
             val uidActual = ServiceLocator.authRepo.usuarioActualUid
             var esAdmin by remember(familiaId, uidActual) { mutableStateOf(false) }
             LaunchedEffect(familiaId, uidActual) {
@@ -398,23 +481,33 @@ fun AppNav(
                 onIrAddGasto   = { nav.navigate(Ruta.AddGasto.build(familiaId)) },
                 onIrAddIngreso = { nav.navigate(Ruta.AddIngreso.build(familiaId)) },
                 onIrHistorial  = { nav.navigate(Ruta.Historial.build(familiaId)) },
+
+                // Vuelve a la puerta de familia
                 onBackToConfig = {
                     nav.navigate(Ruta.ConfigFamilia.route) {
                         popUpTo(Ruta.Inicio.route) { inclusive = true }
                         launchSingleTop = true
                     }
                 },
+
+                // Accesos del menú superior
                 onAbrirConfiguracion = { nav.navigate(Ruta.Configuracion.route) },
                 onVerCategorias      = { nav.navigate(Ruta.Categorias.route) },
                 onCambiarMoneda      = { nav.navigate(Ruta.Moneda.route) },
                 onIrSolicitudes      = { nav.navigate(Ruta.Solicitudes.build(familiaId)) },
                 onVerMiembros        = { nav.navigate(Ruta.Miembros.build(familiaId)) },
+
+                // Estado de permisos
                 esAdmin = esAdmin,
+
+                // Redirección si te expulsan o cambias de familia
                 onExpulsado = goConfigOnKick
             )
         }
 
+        // ----------------------------
         // Añadir gasto
+        // ----------------------------
         composable(
             route = Ruta.AddGasto.route,
             arguments = listOf(navArgument(Ruta.AddGasto.ARG) { type = NavType.StringType })
@@ -430,7 +523,9 @@ fun AppNav(
             )
         }
 
+        // ----------------------------
         // Añadir ingreso
+        // ----------------------------
         composable(
             route = Ruta.AddIngreso.route,
             arguments = listOf(navArgument(Ruta.AddIngreso.ARG) { type = NavType.StringType })
@@ -446,7 +541,9 @@ fun AppNav(
             )
         }
 
-        // Historial (lista meses)
+        // ----------------------------
+        // Historial anual (lista de meses)
+        // ----------------------------
         composable(
             route = Ruta.Historial.route,
             arguments = listOf(navArgument(Ruta.Historial.ARG) { type = NavType.StringType })
@@ -456,6 +553,7 @@ fun AppNav(
                 familiaId = familiaId,
                 familiaVM = familiaVM,
                 onAbrirMes = { year, month ->
+                    // Navega al detalle del mes
                     nav.navigate(Ruta.HistorialMes.build(familiaId, year, month))
                 },
                 onBack = { nav.popBackStack() },
@@ -463,7 +561,9 @@ fun AppNav(
             )
         }
 
-        // Historial Mes (detalle)
+        // ----------------------------
+        // Historial mensual (detalle)
+        // ----------------------------
         composable(
             route = Ruta.HistorialMes.route,
             arguments = listOf(
@@ -488,12 +588,16 @@ fun AppNav(
             )
         }
 
-        // Solicitudes
+        // ----------------------------
+        // Solicitudes (solo accesible desde inicio si eres admin)
+        // ----------------------------
         composable(
             route = Ruta.Solicitudes.routeWithArg,
             arguments = listOf(navArgument(Ruta.Solicitudes.ARG) { type = NavType.StringType })
         ) { backStack ->
             val familiaId = backStack.arguments?.getString(Ruta.Solicitudes.ARG) ?: return@composable
+
+            // VM local de solicitudes para gestionar pendientes
             val soliVM: SolicitudesViewModel = viewModel(
                 factory = SolicitudesVMFactory(
                     solicitudesRepo = ServiceLocator.solicitudesRepo,
@@ -501,6 +605,7 @@ fun AppNav(
                     authRepo        = ServiceLocator.authRepo
                 )
             )
+
             PantallaSolicitudes(
                 familiaId = familiaId,
                 vm = soliVM,
@@ -511,6 +616,7 @@ fun AppNav(
         }
     }
 }
+
 
 
 

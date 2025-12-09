@@ -11,8 +11,11 @@ class SolicitudesVMFactory(
     private val familiaRepo: FamiliaRepositorio,
     private val authRepo: AuthRepositorio
 ) : ViewModelProvider.Factory {
+
+    // Evita warning por el cast genérico del ViewModel
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        // Crea el SolicitudesViewModel inyectando sus repositorios
         return SolicitudesViewModel(
             solicitudesRepo = solicitudesRepo,
             familiaRepo = familiaRepo,
@@ -20,6 +23,7 @@ class SolicitudesVMFactory(
         ) as T
     }
 }
+
 
 
 
